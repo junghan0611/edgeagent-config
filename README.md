@@ -52,7 +52,7 @@ This repository currently contains only:
 
 - `README.md` — purpose and direction
 - `AGENTS.md` — working guide for agents and humans
-- `docs/invariants.md` — non-negotiable design invariants
+- `INVARIANTS.md` — non-negotiable design invariants
 
 Code will come later, after the invariants are stable enough to deserve a
 template.

@@ -17,7 +17,7 @@ Allowed work:
 
 - improve `README.md`
 - improve this `AGENTS.md`
-- improve `docs/invariants.md`
+- improve `INVARIANTS.md`
 - add concise design notes only when requested
 
 Do not create:
@@ -85,7 +85,7 @@ Every future edge node must treat time values as typed concepts:
 Do not subtract values from different time axes. Do not multiply platform-sized
 integers before widening. Do not treat SDK ticks as absolute timestamps.
 
-See `docs/invariants.md`.
+See `INVARIANTS.md`.
 
 ## 5. Zig discipline
 
