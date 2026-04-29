@@ -18,6 +18,7 @@ Allowed work:
 - improve `README.md`
 - improve this `AGENTS.md`
 - improve `INVARIANTS.md`
+- improve `ROADMAP.md`
 - maintain `flake.nix` as a bring-up shell
 - add concise design notes only when requested
 

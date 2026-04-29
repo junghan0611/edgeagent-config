@@ -53,6 +53,7 @@ This repository currently contains only:
 - `README.md` — purpose and direction
 - `AGENTS.md` — working guide for agents and humans
 - `INVARIANTS.md` — non-negotiable design invariants
+- `ROADMAP.md` — staged plan from board smoke tests to edge-agent firmware
 - `flake.nix` / `.envrc` — ESP32-WROOM Zig/ESP-IDF bring-up shell only
 
 Firmware code will come later, after the invariants are stable enough to deserve
