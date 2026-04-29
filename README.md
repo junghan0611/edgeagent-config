@@ -53,9 +53,54 @@ This repository currently contains only:
 - `README.md` — purpose and direction
 - `AGENTS.md` — working guide for agents and humans
 - `INVARIANTS.md` — non-negotiable design invariants
+- `flake.nix` / `.envrc` — ESP32-WROOM Zig/ESP-IDF bring-up shell only
 
-Code will come later, after the invariants are stable enough to deserve a
-template.
+Firmware code will come later, after the invariants are stable enough to deserve
+a template.
+
+## ESP32-WROOM bring-up shell
+
+The first executable artifact is a development shell, not firmware code.
+It provides ESP-IDF, an Xtensa-capable Zig toolchain, `esptool`, and serial
+monitor tools for the connected ESP32-WROOM board.
+
+```bash
+# One-shot
+nix develop
+
+# Or automatic activation
+# .envrc contains: use flake
+direnv allow
+
+# Defaults in the shell:
+# IDF_TARGET=esp32
+# ESPPORT=/dev/ttyUSB0
+# ESPBAUD=460800
+
+edge-chip       # esptool.py chip_id
+edge-flash-id   # esptool.py flash_id
+edge-mac        # esptool.py read_mac
+```
+
+If `/dev/ttyUSB0` is not writable, add the user to `dialout` or temporarily run:
+
+```bash
+sudo chmod a+rw /dev/ttyUSB0
+```
+
+Bring-up verified on ThinkPad with a CP2102-connected ESP32-WROOM:
+
+```text
+Chip: ESP32-D0WDQ6-V3, revision v3.0
+MAC:  78:21:84:9d:d1:28
+```
+
+## Template stance
+
+`kassane/zig-esp-idf-sample` is a reference for the ESP-IDF/Zig glue, not the
+shape of this repository. Do not fork it wholesale and do not vendor its examples
+just to get a blinking app. When firmware starts, copy only the minimum build
+integration needed to support this repository's state-machine core.
 
 ## Non-goals for now
 
@@ -63,7 +108,7 @@ template.
 - No `build.zig` yet
 - No premature hardware abstraction layer
 - No fake sample app just to look complete
-- No dependency choices before the architecture has a reason
+- No firmware dependency choices before the architecture has a reason
 
 ## First principles
 

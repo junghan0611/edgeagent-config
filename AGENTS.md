@@ -18,18 +18,26 @@ Allowed work:
 - improve `README.md`
 - improve this `AGENTS.md`
 - improve `INVARIANTS.md`
+- maintain `flake.nix` as a bring-up shell
 - add concise design notes only when requested
 
 Do not create:
 
 - `src/`
 - `build.zig`
-- `flake.nix`
 - CI workflows
 - example firmware
 - hardware-specific drivers
 
-Until the invariants are stable, code would be noise.
+`flake.nix` is allowed only as a reproducible ESP32-WROOM bring-up shell. It is
+not a firmware scaffold and must not pull policy or sample application code into
+this repository.
+
+`kassane/zig-esp-idf-sample` may be used as an external reference for ESP-IDF/Zig
+integration. Do not fork it wholesale into this repo. Copy only the smallest
+build-system pieces when firmware work is explicitly authorized.
+
+Until the invariants are stable, firmware code would be noise.
 
 ## 2. Identity
 
