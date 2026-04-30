@@ -62,6 +62,7 @@ self-description bugs.
 - Write the first contract notes:
   - `PROFILE.md` for NodeCard field shape
   - `ENVELOPE.md` for canonical encoding and message families
+  - `REGISTRY.md` for persistent identity vs boot-instance indexing
 - Define what must be testable on the host before hardware I/O exists.
 
 Done when:

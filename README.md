@@ -97,6 +97,7 @@ The architecture itself is the manifesto:
 - [INVARIANTS.md](INVARIANTS.md) — time, state, transport, and card laws
 - [PROFILE.md](PROFILE.md) — NodeCard field contract
 - [ENVELOPE.md](ENVELOPE.md) — canonical A2A envelope and encoding
+- [REGISTRY.md](REGISTRY.md) — companion identity and boot-instance indexing
 - [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub bridge
 
 ## NodeCard, in one paragraph
