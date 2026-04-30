@@ -183,3 +183,114 @@ Every future time module must test:
 Invariant:
 
 > If a boundary can be computed, it must be tested.
+
+## 9. Self-description is a contract
+
+A node must speak itself accurately through a card. If the card lies, every
+peer relying on it is now wrong, and the family loses trust silently.
+
+The card is built by the core, not by the boundary. Board init injects a
+static profile; the core composes it with current mode, peripheral state,
+and health into one canonical card.
+
+Forbidden:
+
+```text
+board_init -> serialize self -> push to transport
+```
+
+Correct:
+
+```text
+board_init -> StaticProfile -> core
+core(state, time, profile) -> NodeCard -> output -> transport
+```
+
+Invariant:
+
+> The card is a contract. The contract is built where the state lives.
+
+## 10. Peripheral exclusivity is part of state
+
+When a peripheral is active, it owns pins, clocks, DMA channels, and
+memory. What the node *can* do right now is determined by what is on right
+now.
+
+A card that advertises a capability whose peripheral is currently off, or
+whose pins are owned by another active peripheral, is lying.
+
+Forbidden:
+
+```text
+capability list = static board capabilities
+```
+
+Correct:
+
+```text
+capability list = subset of static capabilities
+                  whose peripherals are currently powered
+                  and whose pins are not owned by another active peripheral
+```
+
+Invariant:
+
+> Mode determines available pins. Capability advertises only what mode
+> allows.
+
+## 11. Transport is replaceable; the contract is not
+
+A2A envelopes (NodeCard, Capability query, Event, Output ack) must travel
+unchanged across ESP-NOW, MQTT, BLE, CoAP, or serial.
+
+Forbidden:
+
+```text
+if transport == MQTT: include extra JSON fields
+if transport == ESP-NOW: drop fields to fit 250 bytes
+```
+
+Correct:
+
+```text
+envelope = canonical encoding (CBOR or fixed JSON subset)
+transport = framing only
+```
+
+If the envelope cannot fit a transport's MTU, fragment at Layer 4 — do not
+mutate the envelope.
+
+Invariant:
+
+> Carriers may differ. The grammar may not.
+
+## 12. Memory is not homogeneous
+
+On boards with PSRAM, internal RAM and external PSRAM live on different
+time axes. Internal RAM serves the hot path; PSRAM serves large buffers
+(camera framebuffers, audio windows). Mixing them silently turns a healthy
+core into a jittery one.
+
+The card must expose internal and external memory as separate health
+fields. The core must not assume one memory region for all allocations.
+
+Forbidden:
+
+```zig
+health.free_heap_bytes = total_free; // mixes internal + PSRAM
+const hot_path_buffer = allocator.alloc(...); // anywhere
+```
+
+Correct:
+
+```zig
+health.free_internal_bytes = ...;
+health.free_psram_bytes    = ...;
+// hot path  -> internal RAM only
+// frame buf -> PSRAM only
+```
+
+Invariant:
+
+> If two regions have different latency, treat them as different
+> resources.

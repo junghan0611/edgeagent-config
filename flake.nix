@@ -1,5 +1,5 @@
 {
-  description = "Edge Agent ESP32-WROOM Zig/ESP-IDF development shell";
+  description = "Edge Agent ESP32 family Zig/ESP-IDF development shell";
 
   inputs = {
     esp-idf.url = "github:mirrexagon/nixpkgs-esp-dev";
@@ -26,7 +26,8 @@
           config = { inherit permittedInsecurePackages; };
         };
 
-        # GLG local board: ESP32-WROOM via CP2102 USB-UART.
+        # Defaults assume one ESP32-family board on /dev/ttyUSB0.
+        # Verified bring-up: ESP32-WROOM (CP2102) and ESP32-CAM via MB (CH340).
         defaultTarget = "esp32";
         defaultPort = "/dev/ttyUSB0";
         defaultBaud = "460800";
@@ -98,10 +99,11 @@
             alias edge-flash-id='esptool.py --chip "$IDF_TARGET" --port "$ESPPORT" flash_id'
             alias edge-mac='esptool.py --chip "$IDF_TARGET" --port "$ESPPORT" read_mac'
 
-            echo "Edge Agent ESP32-WROOM shell"
+            echo "Edge Agent ESP32 family shell"
             echo "  target: $IDF_TARGET (Xtensa LX6)"
             echo "  port:   $ESPPORT"
             echo "  baud:   $ESPBAUD"
+            echo "  boards: ESP32-WROOM (devkit) | ESP32-CAM (AI Thinker, MB)"
             echo "  quick:  edge-target && edge-build && edge-run"
 
             if [ -e "$ESPPORT" ] && [ ! -w "$ESPPORT" ]; then

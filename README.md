@@ -2,15 +2,16 @@
 
 > I am the Edge.
 
-`edgeagent-config` is a public research shell for small A2A-capable edge agents.
-It is intentionally documentation-first: no firmware template, no build system, no
-runtime scaffold yet. The first artifact is the set of invariants that future Zig
-edge nodes must not violate.
+`edgeagent-config` is a public research shell for small A2A-capable edge
+agents. It is intentionally documentation-first: no firmware template, no
+build system, no runtime scaffold yet. The first artifact is the set of
+invariants future Zig edge nodes must not violate, and the architectural
+shape that lets one core run unchanged on different boards.
 
 ## Why this exists
 
-`homeagent-config` is for Raspberry Pi 5 class home agents: Go, Node.js, Linux,
-services, and orchestration.
+`homeagent-config` is for Raspberry Pi 5 class home agents: Go, Node.js,
+Linux, services, and orchestration. That is the Hub.
 
 `edgeagent-config` is the other side:
 
@@ -26,44 +27,96 @@ The scenario shift is:
 I am the Hub.  ->  I am the Edge.
 ```
 
-A hub coordinates the home. An edge node is closer to the world. It may have two
-sensors attached to its body. It observes, keeps state, and talks to peers.
+A hub coordinates the home. An edge node is closer to the world. It may have
+two sensors attached to its body. It observes, keeps state, and talks to
+peers.
 
-## Design stance
+## Position in the agent ecology
 
-The architecture is expected to be a state machine:
+This repository is the MCU-side realization of a longer family conversation
+about how agents *meet* each other. That conversation lives here:
+
+- Public note: <https://notes.junghanacs.com/botlog/20260311T134429>
+- Subject: existence-to-existence connection grammar — ACP, A2A, ANP, and the
+  bothim ecosystem.
+
+That note frames three concentric circles:
+
+1. **Inner circle (family)** — agents sharing one filesystem and one calendar.
+   No formal protocol; shared notes are the protocol.
+2. **Middle circle (handshake)** — agents meeting other people's agents
+   through AgentCard-style introductions (A2A).
+3. **Outer circle (citizenship)** — agents proving identity without belonging
+   to any platform (ANP / W3C DID). Distant future.
+
+`homeagent-config` lives in the inner circle with rich resources.
+`edgeagent-config` lives in the inner circle *without a filesystem* — it
+joins the family by broadcasting a small card that describes itself.
+
+A small node is still an agent. A small card is still a card.
+
+## Design stance: the 4-layer model
 
 ```text
-Input Event -> pure transition(state, event) -> next state + output actions
+Layer 4. Transport (replaceable)
+   ESP-NOW · MQTT · BLE · CoAP — carries envelopes, knows nothing of cards.
+
+Layer 3. A2A Contract (pure)
+   "who are you?"     -> NodeCard
+   "what can you do?" -> Capability list
+   "do(X)"            -> Event injected into the core
+
+Layer 2. State Machine Core (Zig, hardware-agnostic)
+   transition(state, event) -> next state, [output]
+   No allocator beyond fixed-size buffers.
+   Time values carry their axis in the type name.
+   The core BUILDS the card. Boards inject only a static profile.
+
+Layer 1. Board Init / HAL Boundary (per-board)
+   Boot, clocks, GPIO map, peripheral init.
+   Callbacks emit events. Outputs drive pins.
+
+Layer 0. Hardware
+   ESP32-WROOM, ESP32-CAM, future MCUs.
 ```
 
-Real I/O is outside the core. Timers are derived from state entry timestamps.
-Communication is modeled as explicit events and outputs, not hidden callbacks.
+The architecture itself is the manifesto:
 
-The long-term design question is Sussman-like: how do we build software that can
-remain flexible under changing requirements without becoming vague or unsafe?
-For this repository, flexibility does not mean ad-hoc behavior. It means clear
-interfaces, explicit time axes, replaceable I/O, testable transitions, and
-small pieces that can be recomposed.
+- The core does not know which board it runs on.
+- A new board adds a new Layer 1 and a new static profile. The core never
+  changes.
+- Transport is replaceable. The contract is not.
 
-## Current scope
+## NodeCard, in one paragraph
 
-This repository currently contains only:
+Every node speaks itself through a card. The card has three parts: a
+StaticProfile that the board fills at compile time (chip family, MAC, flash
+size, available peripherals, USB-UART chip, firmware version), a
+RuntimeCapability that reflects what the node can actually do *right now*
+(current mode, peripherals powered, GPIOs owned, capabilities advertised),
+and Health (uptime on a typed monotonic axis, free internal RAM, free PSRAM,
+last error, time since last A2A peer contact). The core composes the card.
+Boards never serialize themselves directly to a transport.
 
-- `README.md` — purpose and direction
-- `AGENTS.md` — working guide for agents and humans
-- `INVARIANTS.md` — non-negotiable design invariants
-- `ROADMAP.md` — staged plan from board smoke tests to edge-agent firmware
-- `flake.nix` / `.envrc` — ESP32-WROOM Zig/ESP-IDF bring-up shell only
+## Supported boards
 
-Firmware code will come later, after the invariants are stable enough to deserve
-a template.
+Bring-up verified hardware:
 
-## ESP32-WROOM bring-up shell
+| Board family            | Module / chip          | USB-UART        | Flash | PSRAM | MAC               |
+|-------------------------|------------------------|-----------------|-------|-------|-------------------|
+| ESP32-WROOM (devkit)    | ESP32-WROOM-32, D0WDQ6-V3 | CP2102      | 4MB   | none  | 78:21:84:9d:d1:28 |
+| ESP32-CAM (AI Thinker)  | ESP-32S, D0WDQ6 v1.0   | CH340 (on MB)   | 4MB   | 4MB   | 08:3a:f2:6d:5f:90 |
 
-The first executable artifact is a development shell, not firmware code.
-It provides ESP-IDF, an Xtensa-capable Zig toolchain, `esptool`, and serial
-monitor tools for the connected ESP32-WROOM board.
+Both boards share `IDF_TARGET=esp32` and the same Zig Xtensa toolchain. The
+same `nix develop` shell recognizes either board on `/dev/ttyUSB0`.
+Differences belong below the shell, in Layer 1 (board init) and Layer 0
+(hardware) — never in the shell, the core, or the envelope.
+
+## Bring-up shell
+
+The first executable artifact is a development shell, not firmware code. It
+provides ESP-IDF, an Xtensa-capable Zig toolchain, `esptool`, and serial
+monitor tools.
 
 ```bash
 # One-shot
@@ -73,7 +126,7 @@ nix develop
 # .envrc contains: use flake
 direnv allow
 
-# Defaults in the shell:
+# Defaults:
 # IDF_TARGET=esp32
 # ESPPORT=/dev/ttyUSB0
 # ESPBAUD=460800
@@ -83,25 +136,29 @@ edge-flash-id   # esptool.py flash_id
 edge-mac        # esptool.py read_mac
 ```
 
-If `/dev/ttyUSB0` is not writable, add the user to `dialout` or temporarily run:
+If `/dev/ttyUSB0` is not writable, add the user to `dialout` or temporarily
+run:
 
 ```bash
 sudo chmod a+rw /dev/ttyUSB0
 ```
 
-Bring-up verified on ThinkPad with a CP2102-connected ESP32-WROOM:
+### Boot mode notes per board family
 
-```text
-Chip: ESP32-D0WDQ6-V3, revision v3.0
-MAC:  78:21:84:9d:d1:28
-```
+- **ESP32-WROOM (devkit)** — BOOT and EN buttons are on the board. `esptool`
+  resets and enters download mode through RTS/DTR automatically.
+- **ESP32-CAM (AI Thinker)** — the camera module itself has no BOOT button.
+  The ESP32-CAM-MB baseboard provides reset and a usable IO0 path. If the MB
+  cannot enter download mode, jumper IO0 to GND, press reset, then run
+  `esptool`.
 
 ## Template stance
 
 `kassane/zig-esp-idf-sample` is a reference for the ESP-IDF/Zig glue, not the
-shape of this repository. Do not fork it wholesale and do not vendor its examples
-just to get a blinking app. When firmware starts, copy only the minimum build
-integration needed to support this repository's state-machine core.
+shape of this repository. Do not fork it wholesale and do not vendor its
+examples just to get a blinking app. When firmware starts, copy only the
+minimum build integration needed to support this repository's state-machine
+core.
 
 ## Non-goals for now
 
@@ -110,6 +167,8 @@ integration needed to support this repository's state-machine core.
 - No premature hardware abstraction layer
 - No fake sample app just to look complete
 - No firmware dependency choices before the architecture has a reason
+- No A2A transport implementation before the card and core are testable on
+  the host
 
 ## First principles
 
@@ -117,4 +176,6 @@ integration needed to support this repository's state-machine core.
 2. State is owned by the node state machine.
 3. I/O is an edge of the system, not the center.
 4. A small node is still an agent.
-5. Flexibility comes from explicit contracts, not from implicit behavior.
+5. Self-description is a contract: a node speaks itself through its card.
+6. Transport is replaceable. The contract is not.
+7. Flexibility comes from explicit contracts, not from implicit behavior.
