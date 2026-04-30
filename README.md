@@ -92,6 +92,13 @@ The architecture itself is the manifesto:
   changes.
 - Transport is replaceable. The contract is not.
 
+## Design notes
+
+- [INVARIANTS.md](INVARIANTS.md) — time, state, transport, and card laws
+- [PROFILE.md](PROFILE.md) — NodeCard field contract
+- [ENVELOPE.md](ENVELOPE.md) — canonical A2A envelope and encoding
+- [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub bridge
+
 ## NodeCard, in one paragraph
 
 Every node speaks itself through a card. The card has three parts. The

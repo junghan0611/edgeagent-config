@@ -59,6 +59,9 @@ self-description bugs.
   - `WallClockMs`
 - Lock §9–§13: self-description, peripheral exclusivity, transport
   replaceability, non-homogeneous memory, boot epoch / card freshness.
+- Write the first contract notes:
+  - `PROFILE.md` for NodeCard field shape
+  - `ENVELOPE.md` for canonical encoding and message families
 - Define what must be testable on the host before hardware I/O exists.
 
 Done when:
