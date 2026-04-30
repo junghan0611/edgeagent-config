@@ -18,13 +18,15 @@ storage.
 
 Goal: learn the boards without letting sample code define this project.
 
-- Use `~/repos/3rd/esp32/zig-esp-idf-sample` as an external smoke-test
-  sandbox.
+- Use the `zig-esp-idf-sample` external reference as a smoke-test
+  sandbox. Local path, upstream URL, and read-only rules are tracked in
+  [AGENTS.md § 1.1 External reference repos](AGENTS.md#11-external-reference-repos).
 - Build and flash one upstream sample only to prove the toolchain, serial
   port, reset wiring, flash size, and monitor loop.
 - Treat all sample code as disposable.
 - Do not copy its app structure, examples, or wrapper surface wholesale
-  into this repository.
+  into this repository. Patterns observed while reading it go into
+  [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md).
 - Record only hardware facts that matter, per board:
   - chip model and revision
   - flash size, PSRAM size
@@ -37,7 +39,9 @@ Done when:
 
 - `edge-mac`, `edge-chip`, and `edge-flash-id` work for both ESP32-WROOM
   and ESP32-CAM.
-- One external sample can be flashed and monitored on at least one board.
+- One sample from the `zig-esp-idf-sample` external reference (or an
+  ESP-IDF stock example) can be flashed and monitored on at least one
+  board.
 - Each board can be recovered or reflashed repeatably.
 
 ## Phase 1 — Edge invariants before firmware
@@ -121,7 +125,10 @@ PSRAM) exercises §10 and §12 from day one. ESP32-WROOM follows in 3.5.
 
 Allowed sources:
 
-- ESP-IDF CMake structure from the external sample, reduced to the minimum.
+- ESP-IDF CMake structure from the `zig-esp-idf-sample` external
+  reference (see
+  [AGENTS.md § 1.1](AGENTS.md#11-external-reference-repos)),
+  reduced to the minimum.
 - Zig Xtensa toolchain from `flake.nix`.
 
 First firmware should do only this:

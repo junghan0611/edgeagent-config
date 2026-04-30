@@ -100,6 +100,8 @@ The architecture itself is the manifesto:
 - [REGISTRY.md](REGISTRY.md) — companion identity and boot-instance indexing
 - [INGEST.md](INGEST.md) — receive, validate, bind, and project edge envelopes
 - [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub bridge
+- [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from external
+  reference repos (no code is imported)
 
 ## NodeCard, in one paragraph
 
@@ -172,11 +174,14 @@ sudo chmod a+rw /dev/ttyUSB0
 
 ## Template stance
 
-`kassane/zig-esp-idf-sample` is a reference for the ESP-IDF/Zig glue, not the
-shape of this repository. Do not fork it wholesale and do not vendor its
-examples just to get a blinking app. When firmware starts, copy only the
-minimum build integration needed to support this repository's state-machine
-core.
+External reference repositories (notably `kassane/zig-esp-idf-sample` for
+ESP-IDF/Zig glue) exist to be read, not to define the shape of this
+repository. The canonical list — local paths, upstream URLs, and the
+"read-only, no wholesale import" rule — lives in
+[AGENTS.md § 1.1 External reference repos](AGENTS.md#11-external-reference-repos).
+Patterns learned from reading them are captured in
+[NOTES-EXTERNAL.md](NOTES-EXTERNAL.md). When firmware work begins, copy
+only the smallest build-system glue needed.
 
 ## Non-goals for now
 

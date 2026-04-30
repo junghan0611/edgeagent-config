@@ -37,12 +37,33 @@ Do not create:
 It is not a firmware scaffold and must not pull policy or sample
 application code into this repository.
 
-`kassane/zig-esp-idf-sample` may be used as an external reference for
-ESP-IDF/Zig integration. Do not fork it wholesale into this repo. Copy only
-the smallest build-system pieces when firmware work is explicitly
-authorized.
+External reference repositories are tracked below in §1.1, not by name
+alone. Do not fork them wholesale. Copy only the smallest build-system
+pieces, and only when firmware work is explicitly authorized.
 
 Until the invariants are stable, firmware code would be noise.
+
+## 1.1 External reference repos
+
+These are read-only references kept on disk. They exist to be *read*, not
+imported. Anything copied from them must be the smallest build-system glue
+needed, and only after firmware work is explicitly authorized.
+
+| Name                 | Local path                                  | Upstream                                            | Why kept                                                            |
+|----------------------|---------------------------------------------|-----------------------------------------------------|---------------------------------------------------------------------|
+| zig-esp-idf-sample   | `~/repos/3rd/esp32/zig-esp-idf-sample`      | <https://github.com/kassane/zig-esp-idf-sample>     | ESP-IDF + Zig Xtensa integration reference (build.zig + CMake glue) |
+
+Rules for these references:
+
+- Treat them as read-only. Do not commit changes back upstream from this
+  repo's workflow.
+- Do not import their app code, examples, or wrapper surfaces into this
+  repository. The card, the core, and the envelope must be written here,
+  by hand.
+- Patterns learned from reading them go into `NOTES-EXTERNAL.md`. Code
+  does not.
+- If a local path above is missing, clone the upstream into the same path
+  before continuing. Do not improvise a different location.
 
 ## 2. Identity
 
