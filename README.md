@@ -98,6 +98,7 @@ The architecture itself is the manifesto:
 - [PROFILE.md](PROFILE.md) — NodeCard field contract
 - [ENVELOPE.md](ENVELOPE.md) — canonical A2A envelope and encoding
 - [REGISTRY.md](REGISTRY.md) — companion identity and boot-instance indexing
+- [INGEST.md](INGEST.md) — receive, validate, bind, and project edge envelopes
 - [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub bridge
 
 ## NodeCard, in one paragraph

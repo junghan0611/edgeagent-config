@@ -63,6 +63,7 @@ self-description bugs.
   - `PROFILE.md` for NodeCard field shape
   - `ENVELOPE.md` for canonical encoding and message families
   - `REGISTRY.md` for persistent identity vs boot-instance indexing
+  - `INGEST.md` for validation stages and projection references
 - Define what must be testable on the host before hardware I/O exists.
 
 Done when:
