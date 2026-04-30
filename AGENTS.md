@@ -108,15 +108,22 @@ Rules:
 Every node speaks itself through a NodeCard:
 
 ```text
-NodeCard = StaticProfile        (board fills at compile time)
-         + RuntimeCapability    (current mode, peripherals on, GPIOs owned)
-         + Health               (uptime, free internal/PSRAM, last error,
-                                 time since last A2A)
+NodeCard = StaticProfile        (boot-stable: compile-time constants plus
+                                 values read once from hardware identity
+                                 registers; immutable thereafter)
+         + RuntimeCapability    (current mode, peripherals on, GPIOs owned;
+                                 changes when mode changes)
+         + Health               (boot_epoch, uptime, free internal/PSRAM,
+                                 last error, time since last A2A)
 ```
 
-The card is built by the core, not by the boundary. Boards inject only a
+The card is built by the core, not by the boundary. Boards inject only the
 static profile. This keeps self-description honest and uniform across the
 family. A board that serializes itself directly to a transport is a bug.
+
+"Static" here means "stable for the lifetime of one boot cycle" — not "known
+at compile time". MAC is read once during board init; that is still static
+for the rest of this boot.
 
 ## 5. Multi-board posture
 

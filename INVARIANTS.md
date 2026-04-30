@@ -190,8 +190,10 @@ A node must speak itself accurately through a card. If the card lies, every
 peer relying on it is now wrong, and the family loses trust silently.
 
 The card is built by the core, not by the boundary. Board init injects a
-static profile; the core composes it with current mode, peripheral state,
-and health into one canonical card.
+static profile (boot-stable: compile-time constants plus values read once
+from hardware identity registers, immutable for the rest of the boot
+cycle); the core composes it with current mode, peripheral state, and
+health into one canonical card.
 
 Forbidden:
 
@@ -246,19 +248,21 @@ unchanged across ESP-NOW, MQTT, BLE, CoAP, or serial.
 Forbidden:
 
 ```text
-if transport == MQTT: include extra JSON fields
+if transport == MQTT:    include extra JSON fields
 if transport == ESP-NOW: drop fields to fit 250 bytes
 ```
 
 Correct:
 
 ```text
-envelope = canonical encoding (CBOR or fixed JSON subset)
-transport = framing only
+The project chooses ONE canonical encoding for the envelope.
+Every transport carries the same bytes.
+Transport selects framing only, never encoding, never field set.
 ```
 
 If the envelope cannot fit a transport's MTU, fragment at Layer 4 — do not
-mutate the envelope.
+mutate the envelope. Fragmentation is a transport concern; the envelope
+itself is one canonical form.
 
 Invariant:
 
@@ -266,10 +270,15 @@ Invariant:
 
 ## 12. Memory is not homogeneous
 
-On boards with PSRAM, internal RAM and external PSRAM live on different
-time axes. Internal RAM serves the hot path; PSRAM serves large buffers
-(camera framebuffers, audio windows). Mixing them silently turns a healthy
-core into a jittery one.
+On boards with PSRAM, internal RAM and external PSRAM are different
+resource domains: different latency, different throughput, different bus
+contention. Treating them as one pool turns a healthy core into a jittery
+one under load.
+
+Internal RAM serves the hot path: ISRs, transition state, small buffers.
+PSRAM serves large buffers: camera framebuffers, audio windows. When
+internal RAM is exhausted, the core may degrade gracefully into PSRAM, but
+the degrade must be observable (in health, in the card), never silent.
 
 The card must expose internal and external memory as separate health
 fields. The core must not assume one memory region for all allocations.
@@ -278,7 +287,7 @@ Forbidden:
 
 ```zig
 health.free_heap_bytes = total_free; // mixes internal + PSRAM
-const hot_path_buffer = allocator.alloc(...); // anywhere
+const hot_path_buffer = allocator.alloc(...); // anywhere, silently
 ```
 
 Correct:
@@ -286,11 +295,51 @@ Correct:
 ```zig
 health.free_internal_bytes = ...;
 health.free_psram_bytes    = ...;
-// hot path  -> internal RAM only
-// frame buf -> PSRAM only
+// hot path  -> prefer internal RAM; degrade is observable in card
+// frame buf -> PSRAM
 ```
 
 Invariant:
 
 > If two regions have different latency, treat them as different
 > resources.
+
+## 13. A card must declare its boot epoch
+
+A node may reset, brown out, deep-sleep, or be reflashed. Across any of
+these boundaries, "uptime since the last boot" alone cannot tell a peer
+whether this is the same node instance it was talking to a minute ago.
+
+Without an epoch, a recipient cannot distinguish:
+
+- a node awake for 5 seconds because it just booted
+- a node awake for 5 seconds because it deep-slept and woke
+- a node awake for 5 seconds because it was reflashed and now runs
+  different firmware
+
+All three look identical via uptime alone, and silently corrupt any state a
+peer was holding.
+
+Forbidden:
+
+```text
+card.uptime_ms = monotonic_ms_since_last_boot
+// peers must guess whether this is the same instance as before
+```
+
+Correct:
+
+```text
+card.boot_epoch  = value that strictly increases across reset boundaries
+                   (from non-volatile storage, RTC retention, or a server-
+                   assigned id)
+card.firmware_id = hash or git sha of the running firmware image
+card.uptime_ms   = monotonic ms since last boot
+```
+
+A peer that sees a different `boot_epoch` or `firmware_id` than last time
+must treat the node as a new instance, not as a continuation.
+
+Invariant:
+
+> A card without an epoch is a sentence without a tense.

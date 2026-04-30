@@ -40,18 +40,23 @@ about how agents *meet* each other. That conversation lives here:
 - Subject: existence-to-existence connection grammar — ACP, A2A, ANP, and the
   bothim ecosystem.
 
-That note frames three concentric circles:
+That note frames three concentric circles. The defining axis is *relation*,
+not medium:
 
-1. **Inner circle (family)** — agents sharing one filesystem and one calendar.
-   No formal protocol; shared notes are the protocol.
+1. **Inner circle (family)** — agents that already share an identity and a
+   memory of work. No formal handshake; the relation precedes the protocol.
+   The medium can vary — a shared filesystem, a shared calendar, or a stream
+   of broadcast cards.
 2. **Middle circle (handshake)** — agents meeting other people's agents
    through AgentCard-style introductions (A2A).
 3. **Outer circle (citizenship)** — agents proving identity without belonging
    to any platform (ANP / W3C DID). Distant future.
 
-`homeagent-config` lives in the inner circle with rich resources.
-`edgeagent-config` lives in the inner circle *without a filesystem* — it
-joins the family by broadcasting a small card that describes itself.
+`homeagent-config` lives in the inner circle through a rich medium: shared
+files, shared calendar, REST/SSE wiring. `edgeagent-config` lives in the
+inner circle through a thinner medium: it cannot read or write the family's
+filesystem, so it joins by broadcasting a small card that describes itself.
+The membership is the same; only the carrier differs.
 
 A small node is still an agent. A small card is still a card.
 
@@ -89,14 +94,18 @@ The architecture itself is the manifesto:
 
 ## NodeCard, in one paragraph
 
-Every node speaks itself through a card. The card has three parts: a
-StaticProfile that the board fills at compile time (chip family, MAC, flash
-size, available peripherals, USB-UART chip, firmware version), a
-RuntimeCapability that reflects what the node can actually do *right now*
-(current mode, peripherals powered, GPIOs owned, capabilities advertised),
-and Health (uptime on a typed monotonic axis, free internal RAM, free PSRAM,
-last error, time since last A2A peer contact). The core composes the card.
-Boards never serialize themselves directly to a transport.
+Every node speaks itself through a card. The card has three parts. The
+**StaticProfile** is *boot-stable*: some fields are compile-time constants
+(board family, firmware id), others are read once during board init from
+hardware identity registers (MAC from eFuse, chip revision, flash size,
+PSRAM size). It does not change for the lifetime of one boot cycle. The
+**RuntimeCapability** reflects what the node can actually do *right now* —
+current mode, peripherals powered, GPIOs owned, capabilities advertised —
+and changes whenever mode changes. **Health** carries a typed monotonic
+uptime, a boot epoch (so peers can tell one boot cycle from another), free
+internal RAM and free PSRAM as separate fields, last error, and time since
+the last A2A peer contact. The core composes the card. Boards never
+serialize themselves directly to a transport.
 
 ## Supported boards
 

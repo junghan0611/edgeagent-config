@@ -6,17 +6,13 @@ This roadmap separates throwaway board exploration from the future Edge
 Agent architecture. Real boards exist (ESP32-WROOM, ESP32-CAM); this
 repository is still a research shell.
 
-The phases below also map to the concentric-circle ecology described in
-<https://notes.junghanacs.com/botlog/20260311T134429>:
+The phases below map to the concentric-circle ecology defined in
+[README — Position in the agent ecology](README.md#position-in-the-agent-ecology):
+inner family, middle handshake, outer citizenship. README is the canonical
+source for that model; this file just maps phases onto it.
 
-- **Inner circle (family)** — agents sharing one filesystem.
-- **Middle circle (handshake)** — agents introducing themselves to
-  outsiders via AgentCard-style messages (A2A).
-- **Outer circle (citizenship)** — agents proving identity without
-  belonging to any platform (ANP / W3C DID). Distant future.
-
-An edge node joins the inner circle without owning a filesystem; it joins
-through its card.
+An edge node joins the inner circle through its card, not through shared
+storage.
 
 ## Phase 0 — Multi-board bring-up, outside the architecture
 
@@ -61,8 +57,8 @@ self-description bugs.
   - `DurationMs`
   - `Tick32`
   - `WallClockMs`
-- Lock §9–§12: self-description, peripheral exclusivity, transport
-  replaceability, non-homogeneous memory.
+- Lock §9–§13: self-description, peripheral exclusivity, transport
+  replaceability, non-homogeneous memory, boot epoch / card freshness.
 - Define what must be testable on the host before hardware I/O exists.
 
 Done when:
