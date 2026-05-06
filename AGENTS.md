@@ -108,7 +108,8 @@ Layer 1. Board Init / HAL Boundary (per-board)
    Callbacks emit events. Outputs drive pins.
 
 Layer 0. Hardware
-   ESP32-WROOM, ESP32-CAM, future MCUs.
+   ESP32-WROOM, ESP32-CAM, ESP32-S3 audio board, future MCUs.
+   Per-board cards: see [BOARDS.md](BOARDS.md).
 ```
 
 Rules:
@@ -148,8 +149,16 @@ for the rest of this boot.
 
 ## 5. Multi-board posture
 
-This repository targets a board *family*, not a single device. Two boards
-already matter (ESP32-WROOM, ESP32-CAM). More will follow.
+This repository targets a board *family*, not a single device. Three
+boards are currently verified (ESP32-WROOM, ESP32-CAM, an ESP32-S3
+audio board) and the basecamp is shaped to accept the rest of the ESP
+line through a single axis. Per-board cards — chip facts, host path,
+wired capabilities — live in [BOARDS.md](BOARDS.md). The capability
+axes there are the same names every board card uses; capabilities like
+`audio_in` or `audio_out` are not properties of a particular chip but
+of any board that wires them. Host-side entry into the basecamp goes
+through `./run.sh` (`boards`, `targets`, `port`, `shell`, `probe`,
+`inspect`).
 
 Rules for board variety:
 
@@ -160,6 +169,10 @@ Rules for board variety:
   as different envelope shapes.
 - One transport contract. ESP-NOW vs MQTT vs BLE is a Layer 4 choice; the
   envelope crossing them is identical.
+- One state machine. All loops collapse into the same
+  `transition(state, event) -> next state + [output]`. Boards do not
+  fork the state machine; they only contribute different
+  `StaticProfile` and `RuntimeCapability` values into it.
 
 If a change can be expressed only by branching the core or the envelope,
 the abstraction is wrong.

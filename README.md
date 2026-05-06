@@ -99,6 +99,7 @@ The architecture itself is the manifesto:
 - [ENVELOPE.md](ENVELOPE.md) — canonical A2A envelope and encoding
 - [REGISTRY.md](REGISTRY.md) — companion identity and boot-instance indexing
 - [INGEST.md](INGEST.md) — receive, validate, bind, and project edge envelopes
+- [BOARDS.md](BOARDS.md) — verified board inventory and capability axes
 - [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub bridge
 - [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from external
   reference repos (no code is imported)
@@ -120,17 +121,16 @@ serialize themselves directly to a transport.
 
 ## Supported boards
 
-Bring-up verified hardware:
+Bring-up-verified hardware lives in [BOARDS.md](BOARDS.md) — one card
+per board, with chip facts, host path, and wired capabilities. The
+basecamp currently covers ESP32-WROOM (devkit), ESP32-CAM (AI Thinker),
+and an ESP32-S3 audio board.
 
-| Board family            | Module / chip          | USB-UART        | Flash | PSRAM | MAC               |
-|-------------------------|------------------------|-----------------|-------|-------|-------------------|
-| ESP32-WROOM (devkit)    | ESP32-WROOM-32, D0WDQ6-V3 | CP2102      | 4MB   | none  | 78:21:84:9d:d1:28 |
-| ESP32-CAM (AI Thinker)  | ESP-32S, D0WDQ6 v1.0   | CH340 (on MB)   | 4MB   | 4MB   | 08:3a:f2:6d:5f:90 |
-
-Both boards share `IDF_TARGET=esp32` and the same Zig Xtensa toolchain. The
-same `nix develop` shell recognizes either board on `/dev/ttyUSB0`.
-Differences belong below the shell, in Layer 1 (board init) and Layer 0
-(hardware) — never in the shell, the core, or the envelope.
+The same `nix develop` shell serves every verified board. The chip is
+selected by `IDF_TARGET`; the host port is derived from it (see the
+shell hook in `flake.nix` and the host-side `./run.sh`). Differences
+belong below the shell, in Layer 1 (board init) and Layer 0 (hardware)
+— never in the shell, the core, or the envelope.
 
 ## Bring-up shell
 

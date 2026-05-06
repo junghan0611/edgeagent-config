@@ -111,6 +111,54 @@ not imported into this repository.
             a card that advertises 4MB flash on a node booted with a
             2MB image header is wrong even if the chip itself is 4MB.
 
+### 2026-05-06 — external sample treats the ESP32 line as one family, not a fork tree
+
+- source:   kassane/zig-esp-idf-sample (`build.zig`, `README.md`,
+            `docs/getting-started.md`, `docs/build-internals.md`,
+            `.github/workflows/build.yml`)
+- context:  deciding whether this repository's bring-up shell should
+            grow per-chip branches as new family members arrive. The
+            ESP32 (LX6) → ESP32-S3 (LX7) jump is the first such jump
+            for us, and we want this repo to remain an honest basecamp
+            for the whole ESP edge line, not a single-board scaffold.
+- pattern:  the sample supports the entire current ESP32 line
+            (`esp32`, `esp32s2`, `esp32s3`, `esp32c2`, `c3`, `c5`,
+            `c6`, `c61`, `h2`, `h21`, `h4`, `p4`) through three
+            single-axis toggles, not branches.
+            (1) **Target switch**: `idf.py set-target <chip>` rewrites
+            `sdkconfig` for that chip; there is no per-chip CMake
+            project or build directory hierarchy. The CI matrix
+            (`.github/workflows/build.yml:36`) iterates the same
+            build over chip names.
+            (2) **sdkconfig overlay**: a base `sdkconfig.defaults`
+            plus optional `sdkconfig.defaults.<target>` files cover
+            chip-specific deltas; differences live in declarative
+            config, not in code paths
+            (`docs/getting-started.md:178`, `717-719`).
+            (3) **One Zig toolchain covers both Xtensa LX6 and LX7**:
+            the Espressif Zig fork (`kassane/zig-espressif-bootstrap`)
+            ships a single `zig` binary that handles `esp32`,
+            `esp32s2`, and `esp32s3` (`docs/zig-xtensa.md:36, 109`).
+            For RISC-V chips the upstream Zig already works. The
+            sample's `build.zig` selects between them by chip family
+            (`build.zig:243-246`), not by maintaining two toolchains.
+- our take: this is the shape our bring-up shell must converge on if
+            we want to be an honest ESP-line basecamp. Concretely:
+            `flake.nix` keeps **one** dev shell — adding ESP32-S3
+            means making `IDF_TARGET` a real toggle, not adding a
+            second shell. Chip-family deltas, when they appear in a
+            future firmware phase, belong in declarative config
+            (`sdkconfig.defaults.<target>`) and never in branched
+            code paths inside this repo. The current `zigXtensa`
+            block already pulls the Espressif fork, so new Xtensa
+            members (S2, S3) come for free; future RISC-V members
+            will need a separate fetch, but the `mkShell` shape
+            stays the same. "Board family" in this repo's
+            vocabulary therefore stays a **single axis** (chip
+            family), not a branching tree — and §3 ("the core does
+            not know which board it runs on") is reinforced one
+            layer below: even the bring-up shell must not know.
+
 ### 2026-04-30 — boot epoch has a visible signature on serial
 
 - source:   espressif/esp-idf / ROM bootloader + 2nd stage bootloader

@@ -26,11 +26,14 @@
           config = { inherit permittedInsecurePackages; };
         };
 
-        # Defaults assume one ESP32-family board on /dev/ttyUSB0.
-        # Verified bring-up: ESP32-WROOM (CP2102) and ESP32-CAM via MB (CH340).
-        defaultTarget = "esp32";
-        defaultPort = "/dev/ttyUSB0";
-        defaultBaud = "460800";
+        # Family-aware defaults. The dev shell stays single — chip and
+        # board variations are absorbed by IDF_TARGET and the host port,
+        # not by per-chip shells. See NOTES-EXTERNAL.md (2026-05-06)
+        # and ./run.sh for the matching host-side mapping.
+        defaultTarget      = "esp32";
+        defaultPortBridged = "/dev/ttyUSB0";  # external CP2102/CH340 (esp32, esp32s2)
+        defaultPortNative  = "/dev/ttyACM0";  # native USB Serial/JTAG (esp32s3, c3, c6, ...)
+        defaultBaud        = "460800";
 
         zigXtensaSrc =
           if system == "x86_64-linux" then {
@@ -60,7 +63,8 @@
         formatter = pkgs.nixpkgs-fmt;
 
         devShells.default = pkgs.mkShell {
-          ESPPORT = defaultPort;
+          # Do not pre-bind ESPPORT here — the shellHook picks it from
+          # IDF_TARGET so a single shell can serve every verified board.
           IDF_TARGET = defaultTarget;
           ESPBAUD = defaultBaud;
 
@@ -86,9 +90,22 @@
           ];
 
           shellHook = ''
-            export ESPPORT="''${ESPPORT:-${defaultPort}}"
             export IDF_TARGET="''${IDF_TARGET:-${defaultTarget}}"
             export ESPBAUD="''${ESPBAUD:-${defaultBaud}}"
+
+            # Family-aware default port. Override per-call with ESPPORT=...
+            # SSOT note: this case mirrors NATIVE_USB_TARGETS in ./run.sh.
+            # Keep them in sync by hand (the map is small on purpose).
+            if [ -z "''${ESPPORT:-}" ]; then
+              case "$IDF_TARGET" in
+                esp32s3|esp32s2|esp32c3|esp32c5|esp32c6|esp32c61|esp32h2|esp32p4)
+                  export ESPPORT="${defaultPortNative}"
+                  ;;
+                *)
+                  export ESPPORT="${defaultPortBridged}"
+                  ;;
+              esac
+            fi
 
             alias edge-target='idf.py set-target "$IDF_TARGET"'
             alias edge-build='idf.py build'
@@ -99,12 +116,19 @@
             alias edge-flash-id='esptool.py --chip "$IDF_TARGET" --port "$ESPPORT" flash_id'
             alias edge-mac='esptool.py --chip "$IDF_TARGET" --port "$ESPPORT" read_mac'
 
-            echo "Edge Agent ESP32 family shell"
-            echo "  target: $IDF_TARGET (Xtensa LX6)"
+            echo "Edge Agent — ESP-line basecamp"
+            echo "  target: $IDF_TARGET"
             echo "  port:   $ESPPORT"
-            echo "  baud:   $ESPBAUD"
-            echo "  boards: ESP32-WROOM (devkit) | ESP32-CAM (AI Thinker, MB)"
-            echo "  quick:  edge-target && edge-build && edge-run"
+            echo "  baud:   $ESPBAUD   (flash; monitor uses firmware UART rate)"
+            echo "  toggle: IDF_TARGET=esp32s3 nix develop"
+            echo
+            echo "  verified boards:"
+            echo "    - ESP32-WROOM    (LX6, external CP2102 bridge,  /dev/ttyUSB0)"
+            echo "    - ESP32-CAM      (LX6, external CH340 via MB,   /dev/ttyUSB0)"
+            echo "    - ESP32-S3 Audio (LX7, native USB Serial/JTAG,  /dev/ttyACM0)"
+            echo
+            echo "  inside shell:  edge-target && edge-build && edge-run"
+            echo "  outside shell: ./run.sh boards | targets | port | shell | probe"
 
             if [ -e "$ESPPORT" ] && [ ! -w "$ESPPORT" ]; then
               echo "  warn: $ESPPORT exists but is not writable by $USER."
