@@ -5,9 +5,12 @@
 This file is the per-board card. It records what each verified board on
 this basecamp **actually is**, measured rather than asserted.
 
-- **Schema lives in [PROFILE.md](PROFILE.md)** (`StaticProfile`,
-  `RuntimeCapability`) and [ENVELOPE.md](ENVELOPE.md). This file is the
-  instance side: it fills that schema for boards that have been on a desk.
+- **Schema lives in [spec/PROFILE.md](spec/PROFILE.md)**
+  (`StaticProfile`, `RuntimeCapability`) and
+  [spec/ENVELOPE.md](spec/ENVELOPE.md). This file is the
+  instance side: it fills that schema for boards that have been on a
+  desk. The whole shape is summarized in
+  [ARCHITECTURE.md](ARCHITECTURE.md).
 - **All loops collapse to one state machine.** Boards do not branch the
   state machine; chip and PCB differences enter the system only through
   `StaticProfile` (boot-stable) and `RuntimeCapability` (post-init). See

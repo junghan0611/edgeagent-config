@@ -64,10 +64,10 @@ self-description bugs.
 - Lock §9–§13: self-description, peripheral exclusivity, transport
   replaceability, non-homogeneous memory, boot epoch / card freshness.
 - Write the first contract notes:
-  - `PROFILE.md` for NodeCard field shape
-  - `ENVELOPE.md` for canonical encoding and message families
-  - `REGISTRY.md` for persistent identity vs boot-instance indexing
-  - `INGEST.md` for validation stages and projection references
+  - `spec/PROFILE.md` for NodeCard field shape
+  - `spec/ENVELOPE.md` for canonical encoding and message families
+  - `spec/REGISTRY.md` for persistent identity vs boot-instance indexing
+  - `spec/INGEST.md` for validation stages and projection references
 - Define what must be testable on the host before hardware I/O exists.
 
 Done when:

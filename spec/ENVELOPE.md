@@ -82,7 +82,7 @@ identity still lives in the `card` body.
 body = NodeCard
 ```
 
-The canonical card shape lives in `PROFILE.md`.
+The canonical card shape lives in [PROFILE.md](PROFILE.md) (same folder).
 
 ### 5.2 `query`
 

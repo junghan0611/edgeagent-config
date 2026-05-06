@@ -94,15 +94,18 @@ The architecture itself is the manifesto:
 
 ## Design notes
 
-- [INVARIANTS.md](INVARIANTS.md) — time, state, transport, and card laws
-- [PROFILE.md](PROFILE.md) — NodeCard field contract
-- [ENVELOPE.md](ENVELOPE.md) — canonical A2A envelope and encoding
-- [REGISTRY.md](REGISTRY.md) — companion identity and boot-instance indexing
-- [INGEST.md](INGEST.md) — receive, validate, bind, and project edge envelopes
+- [ARCHITECTURE.md](ARCHITECTURE.md) — one-page synthesis (**start here**)
+- [AGENTS.md](AGENTS.md) — agent-facing rules and project phase
+- [INVARIANTS.md](INVARIANTS.md) — hard rules: time, state, transport, card
 - [BOARDS.md](BOARDS.md) — verified board inventory and capability axes
 - [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub bridge
 - [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from external
-  reference repos (no code is imported)
+  references (no code is imported)
+- `spec/` — protocol and schema contracts:
+  - [PROFILE.md](spec/PROFILE.md) — NodeCard field contract
+  - [ENVELOPE.md](spec/ENVELOPE.md) — canonical A2A envelope and encoding
+  - [REGISTRY.md](spec/REGISTRY.md) — companion identity and boot-instance indexing
+  - [INGEST.md](spec/INGEST.md) — receive, validate, bind, and project edge envelopes
 
 ## NodeCard, in one paragraph
 

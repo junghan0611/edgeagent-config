@@ -43,6 +43,32 @@ pieces, and only when firmware work is explicitly authorized.
 
 Until the invariants are stable, firmware code would be noise.
 
+### Documents map
+
+The whole repository at a glance, in the order a fresh reader (human
+or agent) should walk it:
+
+- [README.md](README.md) — public-facing entry point
+- [ARCHITECTURE.md](ARCHITECTURE.md) — one-page synthesis of the
+  current architecture; read this before editing anything
+- this file (`AGENTS.md`) — rules for working in this repository
+- [INVARIANTS.md](INVARIANTS.md) — hard rules; not negotiable
+- [BOARDS.md](BOARDS.md) — verified board inventory + capability
+  axes
+- [ROADMAP.md](ROADMAP.md) — phase plan
+- [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from
+  external references (no code is imported)
+- `spec/` — protocol and schema contracts (one file per contract):
+  [PROFILE](spec/PROFILE.md) ·
+  [ENVELOPE](spec/ENVELOPE.md) ·
+  [REGISTRY](spec/REGISTRY.md) ·
+  [INGEST](spec/INGEST.md)
+- `PRIVATE.md` — gitignored. Internal-only context (real names of
+  the internal references in §1.1). Hand-delivered, never pushed.
+
+A document not linked from this map or from `README.md` should not
+exist. Linkless documents go stale and become deprecated.
+
 ## 1.1 External reference repos
 
 These are read-only references kept on disk. They exist to be *read*,

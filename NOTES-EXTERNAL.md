@@ -25,8 +25,8 @@ not imported into this repository.
 - Notes are durable. They should still make sense after the local clone
   of an external repo is gone.
 - If a note grows into a real design rule, promote it into
-  `INVARIANTS.md`, `PROFILE.md`, `ENVELOPE.md`, `REGISTRY.md`, or
-  `INGEST.md` and remove it from here.
+  `INVARIANTS.md`, `spec/PROFILE.md`, `spec/ENVELOPE.md`,
+  `spec/REGISTRY.md`, or `spec/INGEST.md` and remove it from here.
 - This file does not direct firmware. It only records what we learned by
   reading.
 
