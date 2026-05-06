@@ -19,11 +19,12 @@ this basecamp **actually is**, measured rather than asserted.
   contract.
 - **A board enters this file only after a hands-on bring-up cycle has
   passed.** Until then the board is a plan, not a verified inventory item.
-- **Identify by measurement, not by assertion.** Chip-side facts come
-  from `./run.sh inspect`. PCB model names go in only when an external
-  source (eFuse user data, firmware banner, vendor sticker) confirms
-  them. When the chip side cannot identify the PCB, that fact is
-  recorded as the answer.
+- **Identify by measurement, not by assertion** — see [AGENTS.md §5
+  "Source of truth: measure first, ask second"](AGENTS.md#5-source-of-truth-measure-first-ask-second).
+  Chip-side facts come from `./run.sh inspect`. PCB model names go in
+  only when an external source (eFuse user data, firmware banner,
+  vendor sticker) confirms them. When the chip side cannot identify
+  the PCB, that fact is recorded as the answer.
 
 ## Capability axes
 

@@ -147,7 +147,54 @@ family. A board that serializes itself directly to a transport is a bug.
 at compile time". MAC is read once during board init; that is still static
 for the rest of this boot.
 
-## 5. Multi-board posture
+## 5. Source of truth: measure first, ask second
+
+Information in this repository comes from two distinct sources that
+must not bleed into each other. This split is the working SSOT
+discipline here: measurable facts are single-sourced from the
+measurement, asserted facts are single-sourced from GLG, and the two
+sources never cross.
+
+- **얻어올 (measurable):** chip identity, eFuse blocks, USB
+  descriptors, firmware boot logs, file contents, git history, build
+  artifacts, anything an instrument or process can determine on its
+  own. The agent gathers these directly via `./run.sh probe`,
+  `./run.sh inspect`, and similar surfaces; future card surfaces will
+  expose them through the `NodeCard` builder.
+- **물어볼 (asserted by GLG):** board model name when the PCB does
+  not burn one, installation context, intended wiring, deployment
+  topology, design intent, naming, scope. No measurable surface
+  carries these, so the agent must ask. They never appear
+  "discovered" because there is nothing to discover.
+
+Rules:
+
+1. **Measure before asking.** If a fact has a measurable surface, the
+   agent must try the surface first. Asking GLG for what the chip
+   already knows wastes both sides and degrades trust.
+2. **Asking has a shape.** When a fact has no measurable surface, the
+   agent says so explicitly: "not measurable from this surface;
+   please confirm X". GLG then provides the assertion, and the agent
+   records it as *declared by GLG*, not as *discovered*.
+3. **Measurement wins on conflict.** GLG can be wrong. If a
+   GLG-asserted fact contradicts a measured one, the agent records
+   the measurement and flags the contradiction; GLG decides whether
+   to re-measure (instrument was wrong) or to retract the assertion
+   (memory was wrong). The agent does not silently overwrite either
+   side.
+4. **Documents distinguish the source.** Per-instance records (board
+   cards, deployment notes, runtime captures) mark each field as
+   `measured`, `declared by GLG`, or `not measurable from this
+   surface — recorded as <X>`. [BOARDS.md](BOARDS.md)'s ESP32-S3
+   audio entry is the live example: chip facts are measured,
+   capability axes are declared, the PCB model is not measurable
+   from the chip side and is recorded as such.
+5. **Inconvenience does not promote a measurable fact to an asserted
+   one.** Surface the measurement command (`./run.sh inspect
+   <target>`, `git log -1 --pretty=%H`, …) instead of asking GLG to
+   type the answer.
+
+## 6. Multi-board posture
 
 This repository targets a board *family*, not a single device. Three
 boards are currently verified (ESP32-WROOM, ESP32-CAM, an ESP32-S3
@@ -177,7 +224,7 @@ Rules for board variety:
 If a change can be expressed only by branching the core or the envelope,
 the abstraction is wrong.
 
-## 6. Time-axis discipline
+## 7. Time-axis discipline
 
 This repository exists partly because a production Zig/ARM32 system failed
 at 24.855 days and had a second latent failure at 49.7 days.
@@ -195,7 +242,7 @@ timestamps.
 
 See `INVARIANTS.md`.
 
-## 7. Zig discipline
+## 8. Zig discipline
 
 Zig is explicit, but not magical.
 
@@ -206,7 +253,7 @@ Zig is explicit, but not magical.
 - Use wrapping arithmetic intentionally (`-%`, `+%`) for wrapping ticks.
 - Boundary tests are more important than happy-path tests.
 
-## 8. Sussman stance: flexible software
+## 9. Sussman stance: flexible software
 
 The design goal is flexible software in the Gerald Jay Sussman sense —
 systems that can be understood, modified, and recomposed without losing
@@ -225,7 +272,7 @@ Flexibility here means:
 
 Flexibility does not mean unbounded abstraction or clever indirection.
 
-## 9. Before adding code
+## 10. Before adding code
 
 Before creating the first `src/` file, answer:
 
@@ -237,7 +284,10 @@ Before creating the first `src/` file, answer:
 6. What is the A2A envelope?
 7. What does its card say at boot vs at peak load?
 8. Which board details belong to StaticProfile vs Layer 1 vs core?
-9. What can be tested without hardware?
-10. What must never happen silently?
+9. Which of the answers above are measured, and which are declared by
+   GLG? (See §5.) If a field has no measurable surface, document the
+   assertion path before writing the code that uses it.
+10. What can be tested without hardware?
+11. What must never happen silently?
 
 If these are unclear, keep writing invariants instead of code.
