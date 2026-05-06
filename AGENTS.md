@@ -45,25 +45,77 @@ Until the invariants are stable, firmware code would be noise.
 
 ## 1.1 External reference repos
 
-These are read-only references kept on disk. They exist to be *read*, not
-imported. Anything copied from them must be the smallest build-system glue
-needed, and only after firmware work is explicitly authorized.
+These are read-only references kept on disk. They exist to be *read*,
+not imported. Anything copied from them must be the smallest
+build-system glue needed, and only after firmware work is explicitly
+authorized. **An agent that does not know these references will not
+understand why the invariants in this repository have the shape they
+do** — the references are part of the project context, not an
+optional appendix.
 
-| Name                 | Local path                                  | Upstream                                            | Why kept                                                            |
-|----------------------|---------------------------------------------|-----------------------------------------------------|---------------------------------------------------------------------|
-| zig-esp-idf-sample   | `~/repos/3rd/esp32/zig-esp-idf-sample`      | <https://github.com/kassane/zig-esp-idf-sample>     | ESP-IDF + Zig Xtensa integration reference (build.zig + CMake glue) |
+### Open-source toolchain reference
 
-Rules for these references:
+| Name               | Local path                              | Upstream                                        | Why kept                                                            |
+|--------------------|-----------------------------------------|-------------------------------------------------|---------------------------------------------------------------------|
+| zig-esp-idf-sample | `~/repos/3rd/esp32/zig-esp-idf-sample`  | <https://github.com/kassane/zig-esp-idf-sample> | ESP-IDF + Zig Xtensa integration reference (build.zig + CMake glue) |
 
-- Treat them as read-only. Do not commit changes back upstream from this
-  repo's workflow.
-- Do not import their app code, examples, or wrapper surfaces into this
-  repository. The card, the core, and the envelope must be written here,
-  by hand.
-- Patterns learned from reading them go into `NOTES-EXTERNAL.md`. Code
-  does not.
-- If a local path above is missing, clone the upstream into the same path
-  before continuing. Do not improvise a different location.
+This is where Phase 0 firmware (target switch, build, flash, monitor)
+actually runs — see [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md)
+"verified Phase 0 procedure for ESP32-S3". Per the rule below, code
+does not flow back into this repository; only patterns in
+`NOTES-EXTERNAL.md` do.
+
+### Internal production reference (lessons-learned source)
+
+There is one internal Zig production codebase this repository takes
+its design lessons from. It is referenced throughout the agent guide
+and the notes as **"the internal production Zig reference"**. Its
+real name, repository URL, deployed product, target hardware, and
+current production version live in **PRIVATE.md** (gitignored,
+hand-delivered to new members alongside this repository).
+
+What an agent needs to know about it without opening PRIVATE.md:
+
+- It is a Zig-based always-on edge node that has shipped to
+  end-customer homes. Remote-update failure means a bricked device.
+- Its single-state-machine, periodic self-inspection posture
+  ("나는 ___이다 — 100 ms마다 스스로에게 묻는다: 지금 내 상태는?
+  지금 무엇을 해야 하는가?") is the posture this repository is
+  re-instantiating for the MCU edge tier.
+- The 24.855-day and 49.7-day overflow failures named in
+  `INVARIANTS.md` are concrete production incidents from that
+  codebase's history; the time-axis discipline in §7 exists
+  because of them.
+
+How to read this reference (per GLG): it is "양산 가려고 하다보니
+지저분해진 코드" — production-bound iteration accumulated surface
+noise on top of the core. Read it for the *posture* that survived
+that pressure (single state machine, periodic self-inspect, typed
+time, named shadow as the A2A surface), not for the surface code
+itself. **Do not align Zig dialect with this reference.** The Zig
+version that lands in this repository follows the bring-up shell's
+toolchain (currently `kassane/zig-espressif-bootstrap`, 0.16.x);
+the reference's own Zig version is not a constraint here.
+Patterns are re-derived in this repo by hand; nothing is
+copy-pasted across.
+
+This reference is internal and is **not** to be linked from
+`README.md` or any other public surface. Mention it only inside
+agent-facing files like this one (and refer to it by the codename
+above, never by its real name in any committed file).
+
+### Rules for all references
+
+- Treat them as read-only. Do not commit changes back upstream from
+  this repo's workflow.
+- Do not import their app code, examples, or wrapper surfaces into
+  this repository. The card, the core, and the envelope must be
+  written here, by hand.
+- Patterns learned from reading them go into `NOTES-EXTERNAL.md`.
+  Code does not.
+- If a local path above is missing, clone the upstream into the same
+  path before continuing (open-source reference) or ask GLG (internal
+  reference). Do not improvise a different location.
 
 ## 2. Identity
 
@@ -90,6 +142,28 @@ I have two sensors attached to my body.
 I observe, transition, and speak to peers.
 ```
 
+### The shape: 자판기 (vending machine)
+
+The shape of that agent is a 자판기 — a vending machine.
+
+- **Same input, same output.** A pure transition function on
+  `(state, event, now_ms)`; no hidden side branches, no clock as
+  side effect (the clock is an argument).
+- **One state owner, one loop.** Other modules and callbacks
+  never hold a mutable pointer into state. They push events; the
+  loop transitions state.
+- **Periodic self-inspect.** Every tick the node asks itself
+  "지금 내 상태는? 지금 무엇을 해야 하는가?" and bounds work into
+  one frame. Default tick is 100 ms (per the production reference
+  in §1.1; not yet pinned as an invariant for this repo).
+
+This is the same posture the internal production Zig reference
+(§1.1) ships in production today — there the same shape is named
+the "프린터 비유" (the node holds a finished frame and each tick
+prints one line of it). The 자판기 framing here is the input-side
+mirror: same coin → same can. Both names refer to one architectural
+decision: pure transition plus periodic self-inspect.
+
 ## 3. Architecture direction: the 4-layer model
 
 ```text
@@ -100,8 +174,17 @@ Layer 3. A2A Contract (pure)
    NodeCard, Capability query, Event, Output ack — canonical envelope.
 
 Layer 2. State Machine Core (Zig, hardware-agnostic)
-   transition(state, event) -> next state + [output]
-   card builder is a pure function of profile + state + time.
+   transition(state, event, now_ms) -> (next_state, actions[])
+   The single core loop is a six-stage conveyor (one tick = 100 ms,
+   default; see §2 "자판기"):
+     poll low-level events
+       → detector (raw → meaningful events)
+       → checkTimeouts (pure, state-entry timestamps; no timer slots)
+       → transition (pure)
+       → view derivation (pure: card snapshot, LED, ...)
+       → I/O dispatch (apply view, run actions)
+   Card builder is one such view derivation: a pure function of
+   profile + state + time.
 
 Layer 1. Board Init / HAL Boundary (per-board)
    Boot, clocks, GPIO map, peripheral init.

@@ -159,6 +159,160 @@ not imported into this repository.
             not know which board it runs on") is reinforced one
             layer below: even the bring-up shell must not know.
 
+### 2026-05-06 — internal production Zig reference: the 자판기 (vending-machine) core
+
+- source:   the internal production Zig reference recorded in
+            [AGENTS.md §1.1](AGENTS.md#11-external-reference-repos)
+            (its real name, repository, and target hardware live in
+            PRIVATE.md; do not name them here). Two files were read:
+            its agent guide and its `docs/hub-architecture-v2.md`.
+- context:  before any code lands in this repository, extract the
+            posture that survived the production iteration of that
+            codebase so we can re-derive it here cleanly instead of
+            copying its surface code.
+- pattern:  하나의 자판기. A pure transition function with periodic
+            self-inspect. Seven rules survive the production scars:
+
+  (1) **Single state owner.** One `HubState` struct holds everything
+      hub-wide; there is exactly one `var` of it, owned by exactly
+      one loop. Other modules and callbacks never hold a `*State`
+      that mutates.
+
+  (2) **Pure transition.** `transition(state, event, now_ms) ->
+      (next_state, actions[])` is a pure function. Same input, same
+      output; no I/O, no thread, no clock side effect (the clock is
+      an explicit argument).
+
+  (3) **100 ms self-inspect.** The hub asks itself, every 100 ms,
+      "지금 내 상태는? 지금 무엇을 해야 하는가?". Concretely a
+      six-stage conveyor:
+
+         poll low-level events
+            → detector (raw → meaningful events)
+            → checkTimeouts (pure, state-entry timestamps)
+            → transition (pure)
+            → view derivation (pure: LED state, card snapshot)
+            → I/O dispatch (apply view, run actions)
+            → sleep 100 ms
+
+  (4) **Threads only in I/O.** `core/`, `types/`, `hub/` are
+      thread-free: no `std.Thread`, no `sleep`, no `while(true)`,
+      no blocking I/O. OS threads, callbacks, and SDK contexts
+      live only in `io/real/` and `io/ffi/`. Their only job is to
+      push an `Event` to the loop — never to mutate state.
+
+  (5) **Timers as state-entry timestamps, not slots.** No timer
+      table in the I/O layer. Every state branch records its
+      entry time (`*_enter_ms`) and `checkTimeouts(state, now_ms)`
+      is a pure function returning a fixed-size `[N]?Event`.
+      Deterministic, testable, no allocation.
+
+  (6) **Event SSOT, two-tier conceptual model.** One `Event` union
+      type at the code level. Internally the team thinks of
+      LowLevelEvent (button edge, raw MQTT message, raw Zigbee
+      callback) being lifted to HighLevelEvent (button_factory_reset,
+      control_pairing_requested, ...) by a "detector" stage. In
+      code, both are members of the same union; the layering is
+      conceptual, not a directory split unless the code needs one.
+
+  (7) **`config_as_ssot.zig`.** Constants, command strings,
+      timeouts, JSON templates — anything the I/O layer might
+      otherwise hardcode — live in a single SSOT file. The
+      transition reads from it; the I/O reads from it; nobody
+      invents a literal.
+
+  Two reinforcing rules from §4 of the reference's agent guide,
+  kept here as forewarning for when firmware work begins:
+
+  - **No mutex while logging or pushing events.** Cross-deadlocks
+    via the logger's own mutex have been a production bug. Record
+    a flag under lock; log after unlock.
+  - **Single integration point per device update.** The "pending
+    transaction" pattern: device state mutates only inside one
+    callback, which also publishes the upstream notification.
+    Single source, single publisher.
+
+- our take: this is the posture this repository wants for the MCU
+  edge tier. Concrete absorption plan:
+
+  - The 100 ms tick and the six-stage conveyor become the canonical
+    expansion of [AGENTS.md §3 Layer 2](AGENTS.md). What was a
+    single signature `transition(state, event) -> next state +
+    [output]` becomes a six-stage conveyor in the agent guide.
+  - "자판기" is GLG's chosen agent-facing name for this posture.
+    [AGENTS.md §2 Identity](AGENTS.md) gains the vending-machine
+    framing. The reference's own "프린터 비유" (the node holds the
+    finished frame, each tick prints one line of it) is kin from
+    the output side; the input-side framing in this repo is 자판기
+    (same coin → same can).
+  - Rules (4), (5), and the deadlock notes become candidates for
+    `INVARIANTS.md` when the first firmware code lands. Recorded
+    here so they are not forgotten in the meantime.
+  - The reference's "code SSOT" (a single file holding constants,
+    command strings, timeouts, JSON templates) maps onto our
+    documentation SSOT (PROFILE / ENVELOPE / REGISTRY / INGEST
+    schemas) plus the measurement-vs-assertion SSOT (AGENTS §5).
+    When code lands here, the same single-file convention is the
+    working assumption until proven inadequate.
+  - Detector concept (6) maps to a future `core/detector.zig` (or
+    an inline helper). The canonical event union stays in one
+    place; the two-tier framing is design-time clarity, not a
+    mandatory directory split.
+
+  Nothing from the reference is copy-pasted. The Zig dialect is
+  not aligned with it. What we keep is the posture, hand-derived
+  inside this repository.
+
+### 2026-05-06 — verified Phase 0 procedure for ESP32-S3 (Zig path)
+
+- source:   kassane/zig-esp-idf-sample (`app.zig`, `flake.nix`,
+            `build.zig`) + espressif/esp-idf v5.5
+- context:  proving end-to-end that this basecamp can take a fresh
+            ESP-line board through "build → flash → boot" without
+            adding code into edgeagent-config itself, and recording
+            the exact path so the next member (or board) does not
+            re-derive it.
+- pattern:  one-liner-per-step procedure that worked verbatim on the
+            ESP32-S3 audio board verified in BOARDS.md.
+
+    cd ~/repos/3rd/esp32/zig-esp-idf-sample
+    nix develop --command bash -c '
+      export IDF_TARGET=esp32s3 ESPPORT=/dev/ttyACM0
+      rm -rf build sdkconfig          # clean target switch
+      idf.py set-target esp32s3       # rewrites sdkconfig
+      idf.py build                    # ~5 min on a cold cache
+      idf.py -p /dev/ttyACM0 flash    # bootloader+partition+app
+      script -qfc "idf.py -p /dev/ttyACM0 monitor" /dev/null
+    '
+
+  Notable signals on a successful run:
+  - bootloader prints `ESP-IDF v5.5.0 2nd stage bootloader`,
+    chip revision, eFuse block revision, SPI flash mode/size,
+    full partition table — all chip-side facts accessible without
+    any extra firmware. This is the §5 "measurable" surface for
+    runtime board identification.
+  - reset reason on the S3 over native USB-JTAG appears as
+    `rst:0x15 (USB_UART_CHIP_RESET)`. Distinct from the
+    `POWERON_RESET` / `SW_CPU_RESET` pair seen on UART-bridged
+    ESP32-WROOM/CAM in the 2026-04-30 boot-epoch note.
+  - `idf.py monitor` over native USB CDC sees the host re-enumerate
+    on reset and prints "device reports readiness to read but returned
+    no data … Waiting for the device to reconnect"; idf_monitor
+    handles the reconnect itself. A plain `cat /dev/ttyACM0` cannot —
+    this is why `./run.sh inspect` could capture only the first line
+    in its 5-second window.
+  - `script -qfc … /dev/null` is still the smallest wrapper that
+    gives idf_monitor a TTY in non-interactive sessions
+    (2026-04-30 note "idf.py monitor requires a TTY on stdin" still
+    holds on the S3 path).
+- our take: this is the working Phase 0 SOP for any ESP-line board.
+  Switching boards means only changing `IDF_TARGET` and `ESPPORT`
+  (or letting `./run.sh shell <target>` derive ESPPORT). The
+  procedure is target-agnostic by construction, which is the
+  basecamp guarantee we wanted: a new member with a different ESP
+  chip can run the exact same six lines and reach a `Hello, world
+  from Zig!` print.
+
 ### 2026-04-30 — boot epoch has a visible signature on serial
 
 - source:   espressif/esp-idf / ROM bootloader + 2nd stage bootloader

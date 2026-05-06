@@ -1,1 +1,5 @@
 .direnv/
+
+# Internal-only context. Never pushed to a public surface.
+# Hand-delivered to new members alongside the public repository.
+PRIVATE.md

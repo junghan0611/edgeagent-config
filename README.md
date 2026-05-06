@@ -134,33 +134,39 @@ belong below the shell, in Layer 1 (board init) and Layer 0 (hardware)
 
 ## Bring-up shell
 
-The first executable artifact is a development shell, not firmware code. It
-provides ESP-IDF, an Xtensa-capable Zig toolchain, `esptool`, and serial
-monitor tools.
+The first executable artifact is a development shell, not firmware
+code. It provides ESP-IDF, an Xtensa-capable Zig toolchain, `esptool`,
+and serial monitor tools. The host-side entry point `./run.sh` exposes
+the same family-aware view from outside the shell.
 
 ```bash
-# One-shot
-nix develop
+# Host-side (no nix shell needed)
+./run.sh boards          # verified board lineup
+./run.sh targets         # supported chip families
+./run.sh probe esp32s3   # chip + flash + MAC of a connected board
+./run.sh inspect esp32s3 # probe + USB descriptor + eFuse + boot capture
 
-# Or automatic activation
-# .envrc contains: use flake
-direnv allow
+# Enter the dev shell, family-aware
+./run.sh shell esp32s3   # equivalent to: IDF_TARGET=esp32s3 nix develop
 
-# Defaults:
-# IDF_TARGET=esp32
-# ESPPORT=/dev/ttyUSB0
-# ESPBAUD=460800
-
-edge-chip       # esptool.py chip_id
+# Inside the dev shell:
+edge-chip       # esptool.py chip_id   (uses $IDF_TARGET, $ESPPORT)
 edge-flash-id   # esptool.py flash_id
 edge-mac        # esptool.py read_mac
+edge-target     # idf.py set-target $IDF_TARGET
+edge-build      # idf.py build
+edge-run        # idf.py flash + monitor
+
+# IDF_TARGET defaults to "esp32"; ESPPORT is derived from it
+# (native USB-JTAG targets get /dev/ttyACM0, UART-bridged get /dev/ttyUSB0).
+# Both can be overridden by exporting them.
 ```
 
-If `/dev/ttyUSB0` is not writable, add the user to `dialout` or temporarily
-run:
+If the chosen serial port is not writable, add the user to `dialout`
+or temporarily:
 
 ```bash
-sudo chmod a+rw /dev/ttyUSB0
+sudo chmod a+rw /dev/ttyACM0   # or /dev/ttyUSB0
 ```
 
 ### Boot mode notes per board family
@@ -174,14 +180,22 @@ sudo chmod a+rw /dev/ttyUSB0
 
 ## Template stance
 
-External reference repositories (notably `kassane/zig-esp-idf-sample` for
-ESP-IDF/Zig glue) exist to be read, not to define the shape of this
-repository. The canonical list — local paths, upstream URLs, and the
-"read-only, no wholesale import" rule — lives in
+External reference repositories exist to be read, not to define the
+shape of this repository. The principal open-source reference for the
+ESP-IDF + Zig toolchain is
+[`kassane/zig-esp-idf-sample`](https://github.com/kassane/zig-esp-idf-sample),
+kept locally at `~/repos/3rd/esp32/zig-esp-idf-sample`; that is also
+where Phase 0 firmware (target switch, build, flash, monitor) actually
+runs today (procedure recorded in
+[NOTES-EXTERNAL.md](NOTES-EXTERNAL.md)).
+
+The canonical list — local paths, upstream URLs, and the "read-only,
+no wholesale import" rule — lives in
 [AGENTS.md § 1.1 External reference repos](AGENTS.md#11-external-reference-repos).
-Patterns learned from reading them are captured in
-[NOTES-EXTERNAL.md](NOTES-EXTERNAL.md). When firmware work begins, copy
-only the smallest build-system glue needed.
+Patterns learned from reading external code are captured in
+[NOTES-EXTERNAL.md](NOTES-EXTERNAL.md); code does not flow into this
+repository. When firmware work begins here, copy only the smallest
+build-system glue needed.
 
 ## Non-goals for now
 

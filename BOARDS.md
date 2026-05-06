@@ -118,9 +118,23 @@ recorded as `unknown`.
 - **bring-up notes:** native USB-JTAG handles reset automatically; no
   external BOOT button manipulation required for download mode. Note
   that native USB CDC will disconnect on reset — host tools must
-  reconnect.
-- **verified (2026-05-06):** chip_id, flash_id, MAC, eFuse summary,
-  USB descriptor. Firmware bring-up: not yet performed.
+  reconnect (a plain `cat /dev/ttyACM0` will miss most of the boot
+  log; use `idf.py monitor` from inside the dev shell).
+- **verified (2026-05-06):**
+  - chip side: chip_id, flash_id, MAC, eFuse summary, USB descriptor
+    via `./run.sh inspect esp32s3`.
+  - Phase 0 firmware: external sample
+    (`~/repos/3rd/esp32/zig-esp-idf-sample`) built and flashed under
+    `IDF_TARGET=esp32s3`; `app_main` reached, Zig-side print
+    `[info] (espressif): Hello, world from Zig!` observed in
+    `idf.py monitor`. Procedure recorded in
+    [NOTES-EXTERNAL.md (2026-05-06 — verified Phase 0 procedure for
+    ESP32-S3)](NOTES-EXTERNAL.md).
+  - Reset reason on S3 native USB path: `rst:0x15
+    (USB_UART_CHIP_RESET)`.
+  - Bootloader-side facts visible on every boot (post-firmware
+    measurable surface): chip revision, eFuse block revision, SPI
+    flash mode and size, partition table.
 
 ## Adding a new board
 
