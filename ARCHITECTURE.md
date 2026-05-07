@@ -41,7 +41,9 @@ The shape of that agent is a 자판기 — a vending machine.
   transitions state.
 - **Periodic self-inspect.** Every tick the node asks itself "지금 내
   상태는? 지금 무엇을 해야 하는가?" and bounds work into one frame.
-  Default tick is 100 ms.
+  Default tick is 100 ms (taken from the production reference; not
+  yet locked as an invariant for this repository — see
+  [AGENTS.md §2](AGENTS.md)).
 
 This is the same posture the internal production Zig reference (see
 [AGENTS.md §1.1](AGENTS.md#11-external-reference-repos)) ships in
@@ -59,7 +61,8 @@ Layer 3. A2A Contract (pure)
 
 Layer 2. State Machine Core (Zig, hardware-agnostic)
    transition(state, event, now_ms) -> (next_state, actions[])
-   The core loop is a six-stage 100 ms conveyor (see §4 below).
+   The core loop is a six-stage conveyor (default tick 100 ms;
+   tick interval is not yet locked as an invariant — see §4 below).
 
 Layer 1. Board Init / HAL Boundary (per-board)
    Boot, clocks, GPIO map, peripheral init.
@@ -84,9 +87,10 @@ Hard rules at this layering:
   effects.
 - Transport choice (Layer 4) does not change the envelope.
 
-## 4. The 100 ms conveyor (Layer 2 expanded)
+## 4. The six-stage conveyor (Layer 2 expanded)
 
-Every tick the loop runs six stages, each doing one job:
+Every tick the loop runs six stages, each doing one job. The default
+tick interval is 100 ms (not yet locked as an invariant; see §2).
 
 ```
 poll low-level events
@@ -144,8 +148,15 @@ capability cards live in [BOARDS.md](BOARDS.md); the schema lives in
 ## 6. Survival rules carried in (from production reference)
 
 These rules survived a Zig production iteration and are recorded
-here as forewarning before the first firmware code lands. Two of
-them are deadlock-prevention rules from real production incidents.
+here as forewarning before the first firmware code lands. Some of
+them already overlap existing invariants in
+[INVARIANTS.md](INVARIANTS.md) (rule 4 threads-only-in-IO is
+related to §4 "State belongs to the state machine"; rule 5
+timer-as-state-entry-timestamp is the same as §5 "Timeouts are
+derived"). The remaining rules — especially the two deadlock guards
+(rules 8 and 9) — are candidates for promotion into INVARIANTS.md
+when firmware work begins; recording them here keeps them visible
+until that promotion happens.
 
 1. **Single state owner.** One state struct, one `var`, one loop.
 2. **Pure transition.** No I/O, no thread, no clock side effect

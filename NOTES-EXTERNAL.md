@@ -263,6 +263,138 @@ not imported into this repository.
   not aligned with it. What we keep is the posture, hand-derived
   inside this repository.
 
+### 2026-05-06 — external architectural review by sibling agent (GPT-5.5)
+
+- source:   sibling agent review via pi-shell-acp `entwurf`
+            (Task ID `91b9c694`, GPT-5.5). Two passes — full-repo
+            first, then deep dive on `spec/` contracts. The
+            reviewer is a peer agent with no project history, no
+            internal context (PRIVATE.md not visible), and no code
+            to fall back on.
+- context:  before any firmware code lands, get an outside set of
+            eyes on the architecture and on the four spec contracts
+            jointly negotiated with `homeagent-config` in a prior
+            session.
+- pattern:  six recurring observations and three concrete
+            inconsistencies. Captured here as a calibration signal,
+            not a directive.
+
+  Inconsistencies named (these get fixed in the same commit that
+  records this note):
+  - 100 ms is described as "default; not yet pinned as invariant"
+    in AGENTS §2 but as "the 100 ms conveyor" in ARCHITECTURE
+    §2 / §4 (treated almost as locked). One tone needed.
+  - ARCHITECTURE §6 carries nine survival rules extracted from
+    the internal production reference; some overlap existing
+    INVARIANTS (§4, §5), some — the two deadlock guards — do not.
+    Need to decide promotion explicitly.
+  - BOARDS.md introduction cites INVARIANTS §3 for the
+    single-state-machine rule, but §3 is the wrapping-tick rule;
+    the actual single-state-machine rule is §4.
+
+  Six structural observations (not fixed today; recorded as
+  work items for the next design round):
+
+  (1) **The 자판기 / 100 ms / NodeCard shape is sound for ESP32**.
+      Concrete strain points: audio / camera / native USB CDC paths
+      cannot live in the 100 ms frame directly — driver-level ring
+      buffers + bounded summary events into core; deep-sleep nodes
+      break the periodic-self-inspect contract.
+
+  (2) **The measurable / asserted SSOT split (AGENTS §5) holds long
+      term but is binary where reality is six-way.** Additional
+      categories surface naturally as the project grows:
+      `derived` (computed from a measurement by rule),
+      `configured` (sdkconfig / partition table / compile-time
+      flags as firmware artifact declarations),
+      `vendor-documented` (datasheet, schematic — different trust
+      grade), `observed-runtime` (boot log, runtime heap — high
+      volatility).
+
+  (3) **Spec contracts mix wire schema with operational policy.**
+      ENVELOPE describes carrier shapes but stops before
+      authorization / safety class / dedupe semantics. INGEST
+      describes mechanism (decode / validate / bind / project) but
+      stops before quarantine lifecycle. The four specs all assume
+      the same fifth pillar that is not yet written down — named
+      differently in each context but the same gap: Capability
+      Vocabulary in PROFILE, Message Semantics / Command Contract
+      in ENVELOPE, Identity Authority / Provisioning Policy in
+      REGISTRY, Policy Layer in INGEST.
+
+  (4) **PROFILE fields carry hidden source classes.** `board_family`
+      looks measured but on boards like the verified ESP32-S3 audio
+      it is in fact a declared profile selector. PROFILE schema
+      does not surface this distinction; BOARDS.md does (per AGENTS
+      §5) but the rule does not yet flow into the wire format.
+
+  (5) **Versioning is single-number across all four specs.**
+      `card_version` / `schema_version` / envelope `v` are present,
+      but no spec says how an unknown future field is handled
+      (ignore? reject?), how a renamed required field is
+      negotiated, or how validator version is recorded alongside a
+      `validation_result`.
+
+  (6) **Most likely 6-month failure mode: capability honesty
+      erosion.** Across more boards and more developers,
+      `sensor_inventory` and `capabilities_now` drift apart; a
+      board's static "has camera" silently becomes "can capture
+      now" and the hub starts routing impossible commands.
+      INVARIANTS §10 and §11 fall together. Defense: the first
+      firmware must derive `capabilities_now` as a pure function of
+      `(mode, peripheral ownership, init result)`, not as ad-hoc
+      list assembly.
+
+  Items the reviewer wants pinned before the first `src/` file:
+  - **Event queue contract:** max depth, overflow policy, drop-rules,
+    ISR push-fail health flag.
+  - **Per-tick frame budget:** worst-case time bound for transition
+    + view derivation inside one 100 ms frame.
+  - **Boot epoch implementation policy:** NVS counter / RTC
+    retention / server-assigned, with brownout double-increment
+    handled.
+  - **Envelope decode failure behavior:** malformed CBOR → reject
+    only? error_count? transport throttle?
+  - **Power mode invariant:** how card freshness and capability
+    honesty survive deep / light / modem sleep.
+  - **Action idempotency / ack semantics:** duplicate `seq` must
+    not re-execute outputs; the four ack states need a referenced
+    request id.
+
+  Concrete cuts the reviewer suggested for the early MCU tier:
+  - **PROFILE:** defer `gpio_owned`, `sampling_state`,
+    `last_peer_seen_ms`. Keep `mode + capabilities_now +
+    degrade_flags + memory + boot_epoch`.
+  - **ENVELOPE:** weaken §6 192-byte language from "hard target" to
+    "measurement target"; defer fragmentation rules until Phase 5.
+  - **REGISTRY:** defer `mirror_view_ref`, `represented_by`,
+    federation language; keep raw envelope refs,
+    persistent / instance identity, freshness, conflict
+    quarantine.
+  - **INGEST:** defer `federated_ref` and the `federated` state;
+    early ingest = received → decoded → schema_valid →
+    identity_bound → mirrored / rejected.
+
+  Decisions worth defending against future "simplification"
+  pressure (per the reviewer):
+  - PROFILE §1–2 — the StaticProfile / RuntimeCapability / Health
+    three-part split.
+  - ENVELOPE §7 — keeping transport metadata outside the canonical
+    envelope.
+  - REGISTRY §2.2 — `instance_id = persistent_id + boot_epoch`.
+  - INGEST §1, §4.2 — preserving raw evidence even for rejected
+    records.
+  - ARCHITECTURE §5 — card built by core, never serialized by
+    boundary.
+
+- our take: today, only the small inconsistencies are corrected.
+  The structural items become work items for the next design round
+  before the first `src/` file lands. None of them are urgent
+  today; all are urgent before firmware code starts. The reviewer
+  is preserved in the saved entwurf session (Task ID `91b9c694`),
+  available for follow-up if a specific decision needs another
+  pass.
+
 ### 2026-05-06 — verified Phase 0 procedure for ESP32-S3 (Zig path)
 
 - source:   kassane/zig-esp-idf-sample (`app.zig`, `flake.nix`,

@@ -14,7 +14,8 @@ this basecamp **actually is**, measured rather than asserted.
 - **All loops collapse to one state machine.** Boards do not branch the
   state machine; chip and PCB differences enter the system only through
   `StaticProfile` (boot-stable) and `RuntimeCapability` (post-init). See
-  [INVARIANTS.md §3](INVARIANTS.md) and [AGENTS.md §3](AGENTS.md).
+  [INVARIANTS.md §4](INVARIANTS.md) ("State belongs to the state
+  machine") and [AGENTS.md §3](AGENTS.md).
 - **Capabilities are an axis, not a board enumeration.** "Microphone" or
   "speaker" is not an ESP32-S3 trait — it is a capability that a board
   may wire on any chip with the necessary peripherals. Two boards on
