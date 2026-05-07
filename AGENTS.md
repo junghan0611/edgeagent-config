@@ -22,6 +22,9 @@ Allowed work:
 - improve `INVARIANTS.md`
 - improve `ROADMAP.md`
 - maintain `flake.nix` as a multi-board ESP32 family bring-up shell
+- maintain `tools/host-master/` (Phase 4.5 host-side toy — Python
+  fake-edge + master that exercises the canonical envelope without
+  any board)
 - add concise design notes only when requested
 
 Do not create:
@@ -32,6 +35,11 @@ Do not create:
 - example firmware
 - hardware-specific drivers
 - transport implementations (ESP-NOW / MQTT / BLE adapters)
+
+The host-master toy is not firmware. It is the pre-firmware shape of
+the contract — the seat the future Zig core will occupy. It must not
+grow board-specific code, peripheral drivers, or transport adapters
+beyond stdin/stdout.
 
 `flake.nix` is allowed only as a reproducible ESP32 family bring-up shell.
 It is not a firmware scaffold and must not pull policy or sample
@@ -63,6 +71,11 @@ or agent) should walk it:
   [ENVELOPE](spec/ENVELOPE.md) ·
   [REGISTRY](spec/REGISTRY.md) ·
   [INGEST](spec/INGEST.md)
+- `tools/host-master/` — Phase 4.5 host-side toy. A Python
+  `fake_edge.py` seats the future Zig core; a `master.py` throws
+  envelopes at it. No board required. Decision record for why the
+  edge layer does not import a2a SDKs lives in
+  [issue #1](https://github.com/junghan0611/edgeagent-config/issues/1).
 - `PRIVATE.md` — gitignored. Internal-only context (real names of
   the internal references in §1.1). Hand-delivered, never pushed.
 

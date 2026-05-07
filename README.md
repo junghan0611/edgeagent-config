@@ -148,6 +148,7 @@ the same family-aware view from outside the shell.
 ./run.sh targets         # supported chip families
 ./run.sh probe esp32s3   # chip + flash + MAC of a connected board
 ./run.sh inspect esp32s3 # probe + USB descriptor + eFuse + boot capture
+./run.sh hello-edge      # Phase 4.5 — host master ↔ host fake edge, no board
 
 # Enter the dev shell, family-aware
 ./run.sh shell esp32s3   # equivalent to: IDF_TARGET=esp32s3 nix develop

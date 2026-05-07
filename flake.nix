@@ -85,6 +85,10 @@
             pkgs.pkg-config
             pkgs.python3
             pkgs.python3Packages.pyserial
+            # Host-master toy (Phase 4.5) — see tools/host-master/.
+            # CBOR is the canonical envelope encoding (spec/ENVELOPE.md §2);
+            # cbor2 is host-only and never crosses into firmware code.
+            pkgs.python3Packages.cbor2
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
             pkgs.usbutils
           ];

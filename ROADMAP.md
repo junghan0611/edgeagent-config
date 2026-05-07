@@ -188,6 +188,53 @@ Done when:
 
 - The device can say: "I am the Edge. I observe, transition, and speak."
 
+## Phase 4.5 — Host master, single edge
+
+Goal: prove that a master does not need to be embedded. A host-side
+agent (Claude, or any process on the developer's machine) talks the
+canonical envelope to a single edge over a pipe-shaped transport.
+This phase makes "엣지가 살아난다" visible *before* radios, hubs, or
+multiple boards exist.
+
+This phase does not depend on Phase 4. It can run on a host-only fake
+edge (a Python placeholder for the future Zig core) so the contract is
+exercised before firmware is real.
+
+Allowed sources:
+
+- `tools/host-master/` — a host-side toy with two halves:
+  - `fake_edge.py`: the seat the future Zig core will occupy. Boots
+    once, fills a `StaticProfile`, runs a 100 ms self-inspect loop,
+    answers the 4 envelope kinds (`card`, `query`, `event`, `ack`).
+  - `master.py`: a CLI that throws envelopes at `fake_edge.py` and
+    prints what comes back.
+- Canonical encoding remains CBOR (per `spec/ENVELOPE.md §2`); JSON
+  view is debug only.
+
+Rules:
+
+- The `transition()` function in `fake_edge.py` does not name
+  peripherals (no `camera`, `speaker`, `pir`, `mic` in its body). It
+  reads `capabilities_now` bits and event kinds only. This is the
+  invariant §14 candidate from issue #1 *demonstrated in code*; not
+  yet locked as text.
+- No HTTP, no JSON-RPC, no a2a SDK. The decision lives in
+  [issue #1](https://github.com/junghan0611/edgeagent-config/issues/1).
+- The transport is stdin/stdout subprocess. It must be replaceable by
+  serial (Phase 3) without rewriting the envelope.
+
+Done when:
+
+- `./run.sh hello-edge` produces a NodeCard from `fake_edge.py`.
+- `master.py` walks the four early queries (`who_are_you`,
+  `what_can_you_do`, `read_health`, `do_x=ping`) and gets sensible
+  answers for each.
+- A capability advertised in `capabilities_now` matches the
+  `peripherals_active` story (no peripheral lying — invariant §10
+  smoke test).
+- Round-trip CBOR encode → wire → decode matches byte-for-byte for
+  every envelope kind.
+
 ## Phase 5 — A2A transport 1: ESP-NOW broadcast
 
 Goal: let nodes greet each other inside the family without a router.
@@ -214,6 +261,13 @@ Goal: cross from the inner circle into the middle circle.
   nodes it represents.
 - Outbound work targeted at an edge node may arrive via MQTT, get
   translated by the hub, and reach the node as ESP-NOW.
+- **This is the layer where `a2a-python` or `a2a-go` SDK mounts** — the
+  hub's outward face speaks full A2A protocol so external agents read
+  edge confederation cards without learning ESP-NOW. The
+  `a2a-samples/helloworld` shape (AgentCard + AgentSkill + JSONRPC
+  routes) is the reference target. See
+  [issue #1](https://github.com/junghan0611/edgeagent-config/issues/1)
+  for why the edge layer itself does not import a2a SDKs.
 
 Done when:
 

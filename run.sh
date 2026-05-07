@@ -220,6 +220,25 @@ cmd_inspect() {
   echo "  capability profile, not by an asserted model name."
 }
 
+cmd_hello_edge() {
+  # Phase 4.5 host-side toy: master.py spawns fake_edge.py as a
+  # subprocess and walks the four canonical queries. No board needed.
+  # See tools/host-master/README.md and issue #1.
+  local here
+  here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+  if python3 -c "import cbor2" >/dev/null 2>&1; then
+    exec python3 "$here/tools/host-master/master.py" "$@"
+  fi
+
+  # Outside the nix devShell — bring cbor2 in just for this run.
+  # nix-shell -p (legacy) sets PYTHONPATH for python3Packages.* automatically;
+  # `nix shell` (flake) does not. We use the legacy form on purpose here.
+  echo "cbor2 not on PYTHONPATH; pulling python3Packages.cbor2 via nix-shell ..."
+  exec nix-shell -p python3 python3Packages.cbor2 \
+    --run "python3 '$here/tools/host-master/master.py' $*"
+}
+
 cmd_help() {
   cat <<'EOF'
 Edge Agent — ESP-line basecamp
@@ -234,6 +253,8 @@ Commands (host-side, no nix shell required):
   probe [target]  Read chip_id + flash_id + MAC from the connected board.
   inspect [target] Probe + USB descriptor + eFuse + 5s serial capture.
                    Use this to identify a board, not just its chip.
+  hello-edge      Phase 4.5 — run the host master against a host-only
+                   fake edge and walk the 4 canonical queries. No board.
   help            This message.
 
 Inside `nix develop`, prefer the `edge-*` aliases:
@@ -255,6 +276,7 @@ case "${1:-help}" in
   shell)          shift; cmd_shell    "$@" ;;
   probe)          shift; cmd_probe    "$@" ;;
   inspect)        shift; cmd_inspect  "$@" ;;
+  hello-edge)     shift; cmd_hello_edge "$@" ;;
   help|-h|--help) cmd_help ;;
   *) echo "unknown command: $1" >&2; cmd_help; exit 64 ;;
 esac
