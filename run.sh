@@ -32,6 +32,7 @@ verified_boards() {
   ESP32-WROOM     LX6   external CP2102 bridge   /dev/ttyUSB0
   ESP32-CAM       LX6   external CH340 via MB    /dev/ttyUSB0
   ESP32-S3 Audio  LX7   native USB Serial/JTAG   /dev/ttyACM0
+  ESP32-PICO-D4   LX6   M5Stack carrier (0403:6001) /dev/ttyUSB0
 EOF
 }
 

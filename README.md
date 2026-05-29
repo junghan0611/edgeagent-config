@@ -127,7 +127,7 @@ serialize themselves directly to a transport.
 Bring-up-verified hardware lives in [BOARDS.md](BOARDS.md) — one card
 per board, with chip facts, host path, and wired capabilities. The
 basecamp currently covers ESP32-WROOM (devkit), ESP32-CAM (AI Thinker),
-and an ESP32-S3 audio board.
+an ESP32-S3 audio board, and an ESP32-PICO-D4 on an M5Stack carrier.
 
 The same `nix develop` shell serves every verified board. The chip is
 selected by `IDF_TARGET`; the host port is derived from it (see the

@@ -140,6 +140,54 @@ recorded as `unknown`.
     measurable surface): chip revision, eFuse block revision, SPI
     flash mode and size, partition table.
 
+### ESP32-PICO-D4 on an M5Stack carrier  (exact M5Stack model: asserted by GLG, pending)
+
+- **chip:** ESP32-PICO-D4 (Xtensa LX6 dual), revision v1.0, 240 MHz,
+  40 MHz crystal. A SiP — the flash is embedded inside the chip package
+  (esptool feature flags report `Embedded Flash`).
+- **memory:** 4 MB in-package flash (mfr `0xc8` GigaDevice, dev `0x4016`,
+  3.3 V by strapping) · no PSRAM (the D4 variant integrates flash only;
+  the PSRAM-bearing part is PICO-V3-02, which this is not) · 520 KB
+  on-chip SRAM
+- **host path:** USB-UART at `0403:6001` → `/dev/ttyUSB0`. `lsusb`
+  resolves `0403:6001` through usb.ids as a generic FTDI FT232, but the
+  device's own USB **string descriptors** carry M5Stack identity:
+  manufacturer `Hades2001`, product `M5stack`, serial `E14DBA4FA9`
+  (read from sysfs by `./run.sh inspect esp32`).
+- **MAC (this unit):** `24:a1:60:47:e7:2c` (factory MAC, BLOCK0)
+- **carrier identification:** the USB string descriptor (`M5stack` /
+  `Hades2001`) is a **measured** vendor source — this PICO-D4 is on an
+  M5Stack product, not a bare module. The chip cannot tell us *which*
+  M5Stack board, so the exact model is an assertion GLG must supply
+  (AGENTS §5 ask-second). Until then the board is identified as
+  "ESP32-PICO-D4 on an M5Stack carrier".
+- **capabilities the chip can do (ESP32 native):**
+  `wifi`, `ble`, `deep_sleep`, `touch`
+- **capabilities the chip can do but need external wiring:**
+  `audio_in`, `audio_out`, `camera`, `sd_card` — chip native, carrier
+  needs external circuitry
+- **PCB-wired capabilities (`button_user`, `led_status`): not yet
+  introspected.** Which GPIOs carry an LED or user button depends on the
+  specific M5Stack carrier and is recorded as `unknown` until confirmed
+  by the model name + bring-up firmware. `button_boot` is implied by
+  working RTS/DTR download (see bring-up notes) but its GPIO is not yet
+  asserted.
+- **eFuse (via `./run.sh inspect esp32`):** factory MAC only; BLOCK3
+  variable block carries only ADC calibration / MAC version (no
+  flash-encryption key, no secure-boot key, no user-burned board id);
+  Coding Scheme NONE. ADC VREF calibration present.
+- **bring-up notes:** download mode is automatic — esptool reset and
+  entered download via RTS/DTR (`Hard resetting via RTS pin`), same as
+  the ESP32-WROOM devkit. Preloaded firmware boot banner captured:
+  `rst:0x1 (POWERON_RESET), boot:0x13 (SPI_FAST_FLASH_BOOT)`,
+  ROM date `Jun 8 2016`.
+- **verified (2026-05-29):** chip side only — chip_id, flash_id, MAC,
+  eFuse summary, USB descriptor, and a preloaded-firmware boot banner
+  via `./run.sh inspect esp32`. No `hello_world` flashed by us yet, so
+  this is `verified: chip_id only` per the procedure below; promote to a
+  full Phase 0 entry once a sample is built and flashed under
+  `IDF_TARGET=esp32`.
+
 ## Adding a new board
 
 1. Connect the board.
