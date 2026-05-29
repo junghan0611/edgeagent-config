@@ -2,13 +2,13 @@
 
 **"I am the Edge."**
 
-This repository is a documentation-first research shell for Zig-oriented
-small edge agents. Do not add code, build systems, directories, or
-abstractions until a human explicitly asks for them.
+This repository is a roadmap-first, documentation-first research shell for
+Zig-oriented small edge agents. Do not add code, build systems, directories,
+or abstractions until a human explicitly asks for them.
 
 The current job is to preserve hard-won design invariants before firmware
-exists, and to anchor the multi-board, card-first architecture before any
-single board's quirks contaminate the design.
+exists, and to keep the roadmap / multi-board / card-first architecture aligned
+before any single board's quirks contaminate the design.
 
 ## 1. Project phase: research shell
 
@@ -61,9 +61,12 @@ or agent) should walk it:
   current architecture; read this before editing anything
 - this file (`AGENTS.md`) — rules for working in this repository
 - [INVARIANTS.md](INVARIANTS.md) — hard rules; not negotiable
-- [BOARDS.md](BOARDS.md) — verified board inventory + capability
-  axes
-- [ROADMAP.md](ROADMAP.md) — phase plan
+- [BOARDS.md](BOARDS.md) — bench-observed board inventory + capability
+  axes + verification status
+- [ROADMAP.md](ROADMAP.md) — living roadmap: phase plan plus dated
+  direction decisions as they accumulate
+- [NEXT.md](NEXT.md) — current next-step queue only; keep it actionable,
+  and move durable decisions back into ROADMAP.md or the documents above
 - [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from
   external references (no code is imported)
 - `spec/` — protocol and schema contracts (one file per contract):
@@ -80,7 +83,21 @@ or agent) should walk it:
   the internal references in §1.1). Hand-delivered, never pushed.
 
 A document not linked from this map or from `README.md` should not
-exist. Linkless documents go stale and become deprecated.
+exist. Linkless documents go stale and become deprecated. `NEXT.md` is
+allowed because it is linked here and intentionally volatile; update or
+prune it at the end of each repo session.
+
+### Planning discipline — ROADMAP vs NEXT
+
+- `ROADMAP.md` is the project memory of direction. It is a living roadmap,
+  not a changelog: it records phase boundaries, current strategy, and dated
+  decisions that should remain visible as the plan evolves.
+- `NEXT.md` is the working queue for the next concrete actions. It should not
+  carry durable direction once that direction has been promoted to
+  `ROADMAP.md`, `BOARDS.md`, `ARCHITECTURE.md`, or this guide.
+- End a repo session by pruning `NEXT.md`: remove solved items, keep only the
+  next actionable steps, and move durable decisions into the stable document
+  that owns them.
 
 ## 1.1 External reference repos
 
@@ -319,11 +336,13 @@ Rules:
 ## 6. Multi-board posture
 
 This repository targets a board *family*, not a single device. Three
-boards are currently verified (ESP32-WROOM, ESP32-CAM, an ESP32-S3
-audio board) and the basecamp is shaped to accept the rest of the ESP
-line through a single axis. Per-board cards — chip facts, host path,
-wired capabilities — live in [BOARDS.md](BOARDS.md). The capability
-axes there are the same names every board card uses; capabilities like
+boards have full Phase 0 verification (ESP32-WROOM, ESP32-CAM, an
+ESP32-S3 audio board), and one ESP32-PICO-D4 has chip-side verification
+through an M5Stack-labeled USB-UART path. The basecamp is shaped to
+accept the rest of the ESP / M5Stack line through a single axis.
+Per-board cards — chip facts, host path, wired capabilities — live in
+[BOARDS.md](BOARDS.md). The capability axes there are the same names
+every board card uses; capabilities like
 `audio_in` or `audio_out` are not properties of a particular chip but
 of any board that wires them. Host-side entry into the basecamp goes
 through `./run.sh` (`boards`, `targets`, `port`, `shell`, `probe`,

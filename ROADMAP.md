@@ -2,17 +2,53 @@
 
 > Keep the production lessons before the firmware exists.
 
-This roadmap separates throwaway board exploration from the future Edge
-Agent architecture. Real boards exist (ESP32-WROOM, ESP32-CAM); this
-repository is still a research shell.
+## What this document is
+
+This is a living roadmap, not a changelog. A changelog records what shipped;
+this file records the path the project is taking, including dated direction
+choices that should remain visible as the plan evolves. `NEXT.md` holds only
+the current working queue. When a NEXT item becomes a durable direction, move
+it here or into the owning design document.
+
+This roadmap separates throwaway board exploration from the future Edge Agent
+architecture. Real boards exist (ESP32-WROOM, ESP32-CAM, ESP32-S3 audio,
+ESP32-PICO-D4 / M5Stack-labeled paths); this repository is still a research
+shell.
 
 The phases below map to the concentric-circle ecology defined in
 [README — Position in the agent ecology](README.md#position-in-the-agent-ecology):
 inner family, middle handshake, outer citizenship. README is the canonical
-source for that model; this file just maps phases onto it.
+source for that model; this file maps phases onto it.
 
 An edge node joins the inner circle through its card, not through shared
 storage.
+
+## Direction log
+
+### 2026-05-29 — M5Stack-first edge bench
+
+- **M5Stack is the primary edge line.** Cheap, stackable ESP32 bodies with
+  Grove/HY2.0 expansion are the first product family to bench. The edge agent
+  lives on ESP-class bodies; the hub remains Raspberry Pi / NUC class.
+- **This repo is the single verification bench.** Every ESP / M5Stack device
+  GLG buys is inspected and recorded here before it counts as supported.
+  Bench → BOARDS.md card → then supported.
+- **The core stays one state machine (자판기).** Peripherals and capabilities are
+  axes bolted onto the core, never new cores. A device set = one core +
+  composed capability profiles per board. If composing a set tempts a Layer 2
+  or Layer 3 change, that is a regression.
+- **Measure first, ask second.** A USB descriptor can prove the USB path label;
+  it cannot by itself prove the exact carrier PCB. PCB model and wiring remain
+  GLG/model/firmware assertions unless a measurable surface exposes them.
+
+Current bench snapshot:
+
+| board/path | status | next promotion step |
+| --- | --- | --- |
+| ESP32-WROOM devkit | full Phase 0 | candidate simple second body |
+| ESP32-CAM AI Thinker | full Phase 0 | candidate first peripheral-rich firmware |
+| ESP32-S3 audio board | full Phase 0 | audio/display-class lessons |
+| ESP32-PICO-D4 via M5Stack-labeled FTDI | `chip_id only` | confirm carrier/model, then flash sample |
 
 ## Phase 0 — Multi-board bring-up, outside the architecture
 
@@ -31,18 +67,20 @@ Goal: learn the boards without letting sample code define this project.
   - chip model and revision
   - flash size, PSRAM size
   - MAC address
-  - working serial port and USB-UART chip
+  - working serial port and USB-UART chip or native USB path
   - reset / boot behavior
-  - notable LEDs / GPIOs
+  - PCB/model identity only when measured from a vendor surface or
+    asserted by GLG because it is not chip-measurable
+  - notable LEDs / GPIOs only after model or firmware confirms wiring
 
 Done when:
 
-- `edge-mac`, `edge-chip`, and `edge-flash-id` work for both ESP32-WROOM
-  and ESP32-CAM.
+- `edge-mac`, `edge-chip`, and `edge-flash-id` work for each board that
+  enters [BOARDS.md](BOARDS.md) at least as `verified: chip_id only`.
 - One sample from the `zig-esp-idf-sample` external reference (or an
-  ESP-IDF stock example) can be flashed and monitored on at least one
-  board.
-- Each board can be recovered or reflashed repeatably.
+  ESP-IDF stock example) can be flashed and monitored on every board
+  promoted to full Phase 0 status.
+- Each full-Phase-0 board can be recovered or reflashed repeatably.
 
 ## Phase 1 — Edge invariants before firmware
 
@@ -120,8 +158,11 @@ Done when:
 Goal: add only the build integration needed to run the core on a single
 board.
 
-Recommend ESP32-CAM as the first target — its peripheral richness (camera,
-PSRAM) exercises §10 and §12 from day one. ESP32-WROOM follows in 3.5.
+Recommend a peripheral-rich board as the first target — either ESP32-CAM
+(camera + PSRAM, already full Phase 0) or a confirmed M5Stack CoreS3-class
+board (display + audio + camera + PSRAM, once bench-verified). The point is
+to exercise §10 and §12 from day one. ESP32-WROOM or a simpler M5Stack body
+follows in 3.5.
 
 Allowed sources:
 

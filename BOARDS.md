@@ -2,8 +2,9 @@
 
 ## What this file is
 
-This file is the per-board card. It records what each verified board on
-this basecamp **actually is**, measured rather than asserted.
+This file is the per-board card. It records what each bench-observed board on
+this basecamp **actually is**, measured rather than asserted, with its current
+verification status made explicit.
 
 - **Schema lives in [spec/PROFILE.md](spec/PROFILE.md)**
   (`StaticProfile`, `RuntimeCapability`) and
@@ -21,8 +22,10 @@ this basecamp **actually is**, measured rather than asserted.
   may wire on any chip with the necessary peripherals. Two boards on
   different chips can advertise the same capability under the same
   contract.
-- **A board enters this file only after a hands-on bring-up cycle has
-  passed.** Until then the board is a plan, not a verified inventory item.
+- **A board enters this file only after a hands-on inspect/bring-up cycle
+  has passed.** Until then the board is a plan, not an inventory item. If
+  firmware has not yet been flashed by us, mark the status as
+  `verified: chip_id only` instead of implying full Phase 0.
 - **Identify by measurement, not by assertion** — see [AGENTS.md §5
   "Source of truth: measure first, ask second"](AGENTS.md#5-source-of-truth-measure-first-ask-second).
   Chip-side facts come from `./run.sh inspect`. PCB model names go in
@@ -33,7 +36,7 @@ this basecamp **actually is**, measured rather than asserted.
 ## Capability axes
 
 Every board card uses these names. New axes are added only when a
-verified board genuinely needs one.
+bench-observed board genuinely needs one.
 
 | axis          | meaning                                                       |
 |---------------|---------------------------------------------------------------|
@@ -140,7 +143,7 @@ recorded as `unknown`.
     measurable surface): chip revision, eFuse block revision, SPI
     flash mode and size, partition table.
 
-### ESP32-PICO-D4 on an M5Stack carrier  (exact M5Stack model: asserted by GLG, pending)
+### ESP32-PICO-D4 with an M5Stack-labeled USB-UART path  (exact carrier/model: GLG confirmation pending)
 
 - **chip:** ESP32-PICO-D4 (Xtensa LX6 dual), revision v1.0, 240 MHz,
   40 MHz crystal. A SiP — the flash is embedded inside the chip package
@@ -151,42 +154,44 @@ recorded as `unknown`.
   on-chip SRAM
 - **host path:** USB-UART at `0403:6001` → `/dev/ttyUSB0`. `lsusb`
   resolves `0403:6001` through usb.ids as a generic FTDI FT232, but the
-  device's own USB **string descriptors** carry M5Stack identity:
+  USB device's own **string descriptors** carry an M5Stack label:
   manufacturer `Hades2001`, product `M5stack`, serial `E14DBA4FA9`
   (read from sysfs by `./run.sh inspect esp32`).
 - **MAC (this unit):** `24:a1:60:47:e7:2c` (factory MAC, BLOCK0)
 - **carrier identification:** the USB string descriptor (`M5stack` /
-  `Hades2001`) is a **measured** vendor source — this PICO-D4 is on an
-  M5Stack product, not a bare module. The chip cannot tell us *which*
-  M5Stack board, so the exact model is an assertion GLG must supply
-  (AGENTS §5 ask-second). Until then the board is identified as
-  "ESP32-PICO-D4 on an M5Stack carrier".
+  `Hades2001`) is a **measured** host-side label for the USB-UART path.
+  It strongly points at an M5Stack product or carrier, but the chip-side
+  measurement cannot prove the exact carrier PCB or model. The exact
+  model is therefore an assertion GLG must supply (AGENTS §5 ask-second).
+  Until then the board is identified as "ESP32-PICO-D4 with an
+  M5Stack-labeled USB-UART path".
 - **capabilities the chip can do (ESP32 native):**
   `wifi`, `ble`, `deep_sleep`, `touch`
 - **capabilities the chip can do but need external wiring:**
   `audio_in`, `audio_out`, `camera`, `sd_card` — chip native, carrier
   needs external circuitry
-- **PCB-wired capabilities (`button_user`, `led_status`): not yet
-  introspected.** Which GPIOs carry an LED or user button depends on the
-  specific M5Stack carrier and is recorded as `unknown` until confirmed
-  by the model name + bring-up firmware. `button_boot` is implied by
-  working RTS/DTR download (see bring-up notes) but its GPIO is not yet
-  asserted.
-- **eFuse (via `./run.sh inspect esp32`):** factory MAC only; BLOCK3
-  variable block carries only ADC calibration / MAC version (no
-  flash-encryption key, no secure-boot key, no user-burned board id);
-  Coding Scheme NONE. ADC VREF calibration present.
+- **PCB-wired capabilities (`button_user`, `led_status`, physical
+  `button_boot`): not yet introspected.** Which GPIOs carry LEDs or
+  buttons depends on the specific carrier and is recorded as `unknown`
+  until confirmed by the model name + bring-up firmware. Automatic
+  download via RTS/DTR is confirmed (see bring-up notes), but that does
+  not by itself prove a physical BOOT button exists.
+- **eFuse (via `./run.sh inspect esp32` and `espefuse.py summary`):**
+  factory MAC only; `BLOCK3` is all zero (no user-burned board id);
+  flash-encryption key block and secure-boot key block are all zero;
+  flash encryption and secure boot are disabled; Coding Scheme NONE.
+  ADC VREF calibration is present in `BLOCK0`.
 - **bring-up notes:** download mode is automatic — esptool reset and
   entered download via RTS/DTR (`Hard resetting via RTS pin`), same as
   the ESP32-WROOM devkit. Preloaded firmware boot banner captured:
   `rst:0x1 (POWERON_RESET), boot:0x13 (SPI_FAST_FLASH_BOOT)`,
   ROM date `Jun 8 2016`.
-- **verified (2026-05-29):** chip side only — chip_id, flash_id, MAC,
-  eFuse summary, USB descriptor, and a preloaded-firmware boot banner
-  via `./run.sh inspect esp32`. No `hello_world` flashed by us yet, so
-  this is `verified: chip_id only` per the procedure below; promote to a
-  full Phase 0 entry once a sample is built and flashed under
-  `IDF_TARGET=esp32`.
+- **verified (2026-05-29):** chip side + host USB path only — chip_id,
+  flash_id, MAC, eFuse summary, USB descriptor, and a preloaded-firmware
+  boot banner via `./run.sh inspect esp32`. No `hello_world` flashed by
+  us yet, so this is `verified: chip_id only` per the procedure below;
+  promote to a full Phase 0 entry once a sample is built and flashed
+  under `IDF_TARGET=esp32`.
 
 ## Adding a new board
 
@@ -194,9 +199,12 @@ recorded as `unknown`.
 2. `./run.sh inspect <target>` and capture the output.
 3. Decide the chip-side facts from `inspect`'s probe and eFuse blocks
    only. Do not assert what the chip cannot confirm.
-4. Decide capabilities from what is **wired** on the PCB, not from
+4. Decide PCB/model identity from a measured vendor surface when one
+   exists; otherwise ask GLG and record it as asserted.
+5. Decide capabilities from what is **wired** on the PCB, not from
    what the chip could in principle do.
-5. Bring up `hello_world` (or equivalent) at least once. Until then,
+6. Bring up `hello_world` (or equivalent) at least once. Until then,
    record `verified: chip_id only`.
-6. Add the board card to this file. Update [README.md](README.md)'s
-   board count if needed.
+7. Add the board card to this file. Update [README.md](README.md),
+   [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and
+   [NEXT.md](NEXT.md) if the supported-lineup wording changes.

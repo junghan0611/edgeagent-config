@@ -26,13 +26,13 @@ NATIVE_USB_TARGETS="esp32s3 esp32s2 esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp
 PORT_NATIVE="/dev/ttyACM0"
 PORT_BRIDGED="/dev/ttyUSB0"
 
-# Verified boards — extend only after a board has actually been on a desk.
-verified_boards() {
+# Bench-observed boards — extend only after a board has actually been on a desk.
+bench_observed_boards() {
   cat <<'EOF'
-  ESP32-WROOM     LX6   external CP2102 bridge   /dev/ttyUSB0
-  ESP32-CAM       LX6   external CH340 via MB    /dev/ttyUSB0
-  ESP32-S3 Audio  LX7   native USB Serial/JTAG   /dev/ttyACM0
-  ESP32-PICO-D4   LX6   M5Stack carrier (0403:6001) /dev/ttyUSB0
+  ESP32-WROOM     LX6   external CP2102 bridge        /dev/ttyUSB0  full Phase 0
+  ESP32-CAM       LX6   external CH340 via MB         /dev/ttyUSB0  full Phase 0
+  ESP32-S3 Audio  LX7   native USB Serial/JTAG        /dev/ttyACM0  full Phase 0
+  ESP32-PICO-D4   LX6   M5Stack-labeled FTDI 0403:6001 /dev/ttyUSB0 chip_id only
 EOF
 }
 
@@ -76,10 +76,10 @@ esptool_bin() {
 # ---------------------------------------------------------------------------
 
 cmd_boards() {
-  echo "Verified boards (all share the same single-shell entry point):"
-  verified_boards
+  echo "Bench-observed boards (all share the same single-shell entry point):"
+  bench_observed_boards
   echo
-  echo "Add a board only after a hands-on bring-up cycle has passed."
+  echo "Add a board only after a hands-on inspect/bring-up cycle has passed."
 }
 
 cmd_targets() {
@@ -247,7 +247,7 @@ Edge Agent — ESP-line basecamp
 Usage: ./run.sh <command> [target]
 
 Commands (host-side, no nix shell required):
-  boards          List verified boards on this basecamp.
+  boards          List bench-observed boards on this basecamp.
   targets         List supported chip families (single-axis toggle).
   port [target]   Print the default serial port for a target.
   shell [target]  Enter nix dev shell with IDF_TARGET=<target>.

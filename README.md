@@ -3,9 +3,9 @@
 > I am the Edge.
 
 `edgeagent-config` is a public research shell for small A2A-capable edge
-agents. It is intentionally documentation-first: no firmware template, no
-build system, no runtime scaffold yet. The first artifact is the set of
-invariants future Zig edge nodes must not violate, and the architectural
+agents. It is intentionally roadmap-first and documentation-first: no firmware
+template, no build system, no runtime scaffold yet. The first artifact is the
+set of invariants future Zig edge nodes must not violate, and the architectural
 shape that lets one core run unchanged on different boards.
 
 ## Why this exists
@@ -29,7 +29,9 @@ I am the Hub.  ->  I am the Edge.
 
 A hub coordinates the home. An edge node is closer to the world. It may have
 two sensors attached to its body. It observes, keeps state, and talks to
-peers.
+peers. Practically, the first product family to bench is M5Stack: cheap,
+stackable ESP32 bodies with Grove/HY2.0 expansion, good enough to compose a
+small family of edge senses and expressions.
 
 ## Position in the agent ecology
 
@@ -82,7 +84,8 @@ Layer 1. Board Init / HAL Boundary (per-board)
    Callbacks emit events. Outputs drive pins.
 
 Layer 0. Hardware
-   ESP32-WROOM, ESP32-CAM, future MCUs.
+   ESP32-WROOM, ESP32-CAM, ESP32-S3 audio, ESP32-PICO-D4,
+   M5Stack bodies, future ESP-family MCUs.
 ```
 
 The architecture itself is the manifesto:
@@ -97,8 +100,12 @@ The architecture itself is the manifesto:
 - [ARCHITECTURE.md](ARCHITECTURE.md) — one-page synthesis (**start here**)
 - [AGENTS.md](AGENTS.md) — agent-facing rules and project phase
 - [INVARIANTS.md](INVARIANTS.md) — hard rules: time, state, transport, card
-- [BOARDS.md](BOARDS.md) — verified board inventory and capability axes
-- [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub bridge
+- [BOARDS.md](BOARDS.md) — bench-observed board inventory, capability axes,
+  and verification status
+- [ROADMAP.md](ROADMAP.md) — living roadmap: phase plan plus dated
+  direction decisions as they accumulate
+- [NEXT.md](NEXT.md) — current next-step queue only; durable decisions move
+  into ROADMAP.md or the design documents above
 - [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from external
   references (no code is imported)
 - `spec/` — protocol and schema contracts:
@@ -124,12 +131,14 @@ serialize themselves directly to a transport.
 
 ## Supported boards
 
-Bring-up-verified hardware lives in [BOARDS.md](BOARDS.md) — one card
-per board, with chip facts, host path, and wired capabilities. The
-basecamp currently covers ESP32-WROOM (devkit), ESP32-CAM (AI Thinker),
-an ESP32-S3 audio board, and an ESP32-PICO-D4 on an M5Stack carrier.
+Bench-observed hardware lives in [BOARDS.md](BOARDS.md) — one card per
+board, with chip facts, host path, wired capabilities, and current
+verification status. The basecamp currently covers ESP32-WROOM (devkit),
+ESP32-CAM (AI Thinker), an ESP32-S3 audio board, and an ESP32-PICO-D4
+observed through an M5Stack-labeled USB-UART path (chip-side only until
+model + firmware bring-up are confirmed).
 
-The same `nix develop` shell serves every verified board. The chip is
+The same `nix develop` shell serves every bench-observed board. The chip is
 selected by `IDF_TARGET`; the host port is derived from it (see the
 shell hook in `flake.nix` and the host-side `./run.sh`). Differences
 belong below the shell, in Layer 1 (board init) and Layer 0 (hardware)
@@ -144,7 +153,7 @@ the same family-aware view from outside the shell.
 
 ```bash
 # Host-side (no nix shell needed)
-./run.sh boards          # verified board lineup
+./run.sh boards          # bench-observed board lineup + status
 ./run.sh targets         # supported chip families
 ./run.sh probe esp32s3   # chip + flash + MAC of a connected board
 ./run.sh inspect esp32s3 # probe + USB descriptor + eFuse + boot capture

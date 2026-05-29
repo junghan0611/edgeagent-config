@@ -69,7 +69,8 @@ Layer 1. Board Init / HAL Boundary (per-board)
    Callbacks emit events. Outputs drive pins.
 
 Layer 0. Hardware
-   ESP32-WROOM, ESP32-CAM, ESP32-S3 audio board, future MCUs.
+   ESP32-WROOM, ESP32-CAM, ESP32-S3 audio board, ESP32-PICO-D4 /
+   M5Stack-labeled paths, future M5Stack and ESP-family boards.
    Per-board cards: see BOARDS.md.
 ```
 
@@ -222,12 +223,13 @@ one card, two source kinds.
   Zig discipline, "before adding code" checklist)
 - [INVARIANTS.md](INVARIANTS.md) — hard rules (time, state,
   transport, card)
-- [BOARDS.md](BOARDS.md) — verified board inventory + capability
-  axes
+- [BOARDS.md](BOARDS.md) — bench-observed board inventory + capability
+  axes + verification status
 - [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from
   external references (no code is imported)
-- [ROADMAP.md](ROADMAP.md) — phase plan from board bring-up to hub
-  bridge
+- [ROADMAP.md](ROADMAP.md) — living roadmap: phase plan plus dated
+  direction decisions
+- [NEXT.md](NEXT.md) — current next-step queue only
 - spec/ — protocol/schema contracts:
   [PROFILE](spec/PROFILE.md) ·
   [ENVELOPE](spec/ENVELOPE.md) ·
