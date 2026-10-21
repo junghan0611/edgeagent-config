@@ -10,7 +10,10 @@ firmware exists. It is the contract between:
   nodes upstream.
 
 The card is not a board dump. It is the smallest truthful sentence a node can
-say about itself.
+say about itself. It is self-description, not authentication evidence or a
+role/permission grant. `firmware_role` is a boot-stable profile/routing hint;
+`capabilities_now` describes availability, not authorization. The separate
+role-assignment direction has no schema here yet.
 
 ## 1. Composition
 

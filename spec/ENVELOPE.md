@@ -72,7 +72,10 @@ Envelope {
 | `body` | Payload for the kind | See below |
 
 `from` is not the whole identity story; it is the routing handle. The full
-identity still lives in the `card` body.
+identity description still lives in the `card` body. Neither the routing
+handle nor the card proves an authenticated identity. Binding to an
+authenticated principal and checking permission to the target/action are
+separate requirements; their mechanism is not specified by this envelope.
 
 ## 5. Body shapes
 
@@ -121,6 +124,10 @@ Acknowledge that something was:
 - degraded
 
 The ack is small. It does not duplicate the whole original message.
+Received or accepted does not mean completed, and a transport send/queue
+receipt is not an execution result. Request correlation, command expiry,
+duplicate-execution handling and authorization rules remain to be specified;
+this alignment adds no wire fields or role-grant message family.
 
 ## 6. Size budget
 

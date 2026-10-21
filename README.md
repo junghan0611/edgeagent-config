@@ -33,6 +33,36 @@ peers. Practically, the first product family to bench is M5Stack: cheap,
 stackable ESP32 bodies with Grove/HY2.0 expansion, good enough to compose a
 small family of edge senses and expressions.
 
+## The three -config siblings
+
+The shared direction is a small authenticated connection structure, not
+an AI product stack or a full IoT cloud. Personal work here is non-Tuya.
+
+| Repository | Intended responsibility |
+| --- | --- |
+| [coreagent-config](https://github.com/junghan0611/coreagent-config) | Server-side authentication, registration, ownership, authorization, connection lifecycle and revocation; reproducible server packaging |
+| [homeagent-config](https://github.com/junghan0611/homeagent-config) | Hub/vendor base, radio and protocol services, and packaging the connection client across boot, provisioning, updates and recovery; current focus is SMHUB Nano |
+| **edgeagent-config** | Small-node hardware-independent state machine, board capabilities, NodeCard self-description and canonical message contracts |
+
+These are responsibility boundaries, not implemented connection features.
+A NodeCard describes capabilities; it is not authentication evidence or a
+role/permission grant. An authenticated Hub does not prove the independent
+identity of downstream Edges. Binding observed node identifiers to an
+authenticated principal must be explicit.
+
+GLG's direction (2026-10-21) is simple: after authentication, a device
+receives a defined role through a card and performs it in its state-machine
+loop. That role-assignment contract is not yet specified; it is not the
+existing NodeCard or its boot-stable `firmware_role` field. AI functions
+are optional capabilities, not prerequisites for participation.
+
+Direct Edge-to-server versus Hub-mediated connectivity, credential issuance,
+claim/transfer/release authority, local admission and offline policy remain
+open. No transport, broker or certificate tooling is selected by this
+alignment. The siblings' proposed host fake-Hub authentication/revocation
+check covers Hub-to-server connectivity only, not downstream Edge trust;
+it has not been run here.
+
 ## Position in the agent ecology
 
 This repository is the MCU-side realization of a longer family conversation
@@ -58,7 +88,9 @@ not medium:
 files, shared calendar, REST/SSE wiring. `edgeagent-config` lives in the
 inner circle through a thinner medium: it cannot read or write the family's
 filesystem, so it joins by broadcasting a small card that describes itself.
-The membership is the same; only the carrier differs.
+The membership is the same; only the carrier differs. Here, joining through
+a card means becoming describable and indexable; admission and permissions
+still require an explicit authenticated binding.
 
 A small node is still an agent. A small card is still a card.
 
@@ -150,6 +182,23 @@ The first executable artifact is a development shell, not firmware
 code. It provides ESP-IDF, an Xtensa-capable Zig toolchain, `esptool`,
 and serial monitor tools. The host-side entry point `./run.sh` exposes
 the same family-aware view from outside the shell.
+
+The firmware shell ships Xtensa toolchains only (`esp32`, `esp32s2`,
+`esp32s3`), because every bench board is Xtensa. A RISC-V board needs
+an explicit `flake.nix` extension before it can build. It keeps the
+nixpkgs that `nixpkgs-esp-dev` locks upstream (nixos-25.11); it is not
+aligned to the system's 26.05.
+
+A second, toolchain-free shell (`nix develop .#host`) carries `esptool`,
+serial tools, and the Phase 4.5 host-master toy on the same nixpkgs
+revision as `nixos-config` at the 2026-10-21 alignment checkpoint;
+future lock updates are independent. `./run.sh hello-edge` falls back to
+this shell when the current Python lacks `cbor2`.
+
+For host-only work, select `nix develop .#host` explicitly. Plain
+`nix develop` and `./run.sh shell` still select the firmware shell and
+can fetch the older nixpkgs source, ESP-IDF sources, and toolchains.
+Keep `.envrc` disabled when these downloads are not intended.
 
 ```bash
 # Host-side (no nix shell needed)

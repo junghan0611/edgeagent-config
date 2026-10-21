@@ -16,7 +16,7 @@ The registry exists to answer four questions:
 
 In short:
 
-- registry owns identity
+- registry owns observed companion / boot-instance indexing
 - ingest preserves truth
 - mirror derives view
 - federation exports projection
@@ -126,10 +126,24 @@ This is the layer that preserves truth.
 
 ## 4. Ownership boundaries
 
-### Registry owns identity
+### Registry owns observed identity indexing
 
 The registry decides how to index enduring companions and boot instances. It
 must not rewrite the edge node's canonical envelope to do so.
+
+This is an observation/indexing boundary, not authority over authenticated
+principals, server accounts, ownership or permissions. Those server-side
+responsibilities belong to `coreagent-config`; binding an observed registry
+key to a principal remains unspecified. A MAC-derived key or a successfully
+indexed card does not authenticate a device. An authenticated representing
+Hub does not independently authenticate every Edge it indexes.
+
+`firmware_role` is the current boot-stable profile/routing classification,
+not a dynamically granted role or permission. Its inclusion in persistent
+identity remains an open question (§9); a future role-assignment design must
+explicitly decide any indexing changes rather than silently changing this
+key. Local admission authority and offline trust policy remain joint design
+questions.
 
 ### Ingest preserves truth
 

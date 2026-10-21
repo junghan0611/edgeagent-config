@@ -2,8 +2,13 @@
   description = "Edge Agent ESP32 family Zig/ESP-IDF development shell";
 
   inputs = {
+    # Host side: same channel as nixos-config, locked to the same revision
+    # there, so the source and the host tools come from the system store.
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    # Firmware side: keeps esp-dev's own nixpkgs lock (nixos-25.11), the
+    # combination upstream pins. Its overlay does not evaluate on 26.05
+    # (tools.nix requires python310). Not aligned to 26.05 on purpose.
     esp-idf.url = "github:mirrexagon/nixpkgs-esp-dev";
-    nixpkgs.follows = "esp-idf/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -12,19 +17,23 @@
       let
         permittedInsecurePackages = [
           # ESP-IDF v5.5 toolchain still pulls python ecdsa via esptool.
-          # This is a dev-shell dependency, not firmware code.
+          # This is a dev-shell dependency, not firmware code. The
+          # vulnerability (CVE-2024-23342) is not fixed; the exception is
+          # scoped to the firmware package set only.
           "python3.13-ecdsa-0.19.1"
         ];
 
-        pkgs = import nixpkgs {
+        # Firmware package set: esp-dev's own nixpkgs (25.11) + its overlay.
+        # Every firmware-shell package, Python included, comes from here so
+        # PYTHONPATH never mixes two nixpkgs.
+        pkgs = import esp-idf.inputs.nixpkgs {
           inherit system;
           overlays = [ esp-idf.overlays.default ];
           config = { inherit permittedInsecurePackages; };
         };
-        basePkgs = import nixpkgs {
-          inherit system;
-          config = { inherit permittedInsecurePackages; };
-        };
+        # Host package set: root nixpkgs (26.05), no overlay, no insecure
+        # exception. nixpkgs#esptool 5.x does not depend on ecdsa.
+        hostPkgs = import nixpkgs { inherit system; };
 
         # Family-aware defaults. The dev shell stays single — chip and
         # board variations are absorbed by IDF_TARGET and the host port,
@@ -60,8 +69,28 @@
         };
       in
       {
-        formatter = pkgs.nixpkgs-fmt;
+        formatter = hostPkgs.nixpkgs-fmt;
 
+        # Host-only shell: serial tools + the Phase 4.5 host-master toy.
+        # No ESP-IDF, no Zig. `./run.sh hello-edge` uses it so the toy
+        # follows this lock instead of the user's nixpkgs channel.
+        devShells.host = hostPkgs.mkShell {
+          packages = [
+            hostPkgs.esptool
+            hostPkgs.tio
+            hostPkgs.picocom
+            hostPkgs.python3
+            hostPkgs.python3Packages.pyserial
+            hostPkgs.python3Packages.cbor2
+          ] ++ hostPkgs.lib.optionals hostPkgs.stdenv.isLinux [
+            hostPkgs.usbutils
+          ];
+        };
+
+        # Firmware shell. Ships Xtensa toolchains only (esp32, esp32s2,
+        # esp32s3) — every bench board is Xtensa, and zigXtensa above is
+        # Xtensa-only too. A RISC-V board needs an explicit extension here
+        # (esp-idf-riscv or esp-idf-full, plus a RISC-V Zig).
         devShells.default = pkgs.mkShell {
           # Do not pre-bind ESPPORT here — the shellHook picks it from
           # IDF_TARGET so a single shell can serve every verified board.
@@ -72,11 +101,11 @@
             pkgs.bashInteractive
             zigXtensa
             pkgs.zls
-            pkgs.esp-idf-full
+            pkgs.esp-idf-xtensa
 
             # Standalone board/serial tools.
             # ESP-IDF also exposes esptool.py; nixpkgs#esptool may expose esptool v5.
-            basePkgs.esptool
+            pkgs.esptool
             pkgs.tio
             pkgs.picocom
             pkgs.git
@@ -111,6 +140,14 @@
               esac
             fi
 
+            case "$IDF_TARGET" in
+              esp32|esp32s2|esp32s3) ;;
+              *)
+                echo "  warn: IDF_TARGET=$IDF_TARGET is not Xtensa. This shell ships"
+                echo "        Xtensa toolchains only; extend flake.nix for RISC-V first."
+                ;;
+            esac
+
             alias edge-target='idf.py set-target "$IDF_TARGET"'
             alias edge-build='idf.py build'
             alias edge-flash='idf.py -p "$ESPPORT" -b "$ESPBAUD" flash'
@@ -124,7 +161,7 @@
             echo "  target: $IDF_TARGET"
             echo "  port:   $ESPPORT"
             echo "  baud:   $ESPBAUD   (flash; monitor uses firmware UART rate)"
-            echo "  toggle: IDF_TARGET=esp32s3 nix develop"
+            echo "  toggle: IDF_TARGET=esp32s3 nix develop   (Xtensa: esp32, esp32s2, esp32s3)"
             echo
             echo "  verified boards:"
             echo "    - ESP32-WROOM    (LX6, external CP2102 bridge,  /dev/ttyUSB0)"

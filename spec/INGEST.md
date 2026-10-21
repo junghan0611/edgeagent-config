@@ -6,6 +6,13 @@ then derives mirror or federated views.
 
 The ingest path is where transport noise ends and contract discipline begins.
 
+Here, preserving "truth" means preserving received evidence, not endorsing
+the sender's claims. `schema_valid` and `identity_bound` denote schema checks
+and observed registry binding only; neither means authenticated, owned or
+authorized. Evidence capture must not itself authorize routing or execution.
+The security gate and principal-to-node binding remain unspecified across
+core, hub and edge; this pipeline is not a complete secure admission flow.
+
 ## 1. Purpose
 
 The ingest pipeline must guarantee four things:
@@ -107,7 +114,7 @@ rejected
 | `received` | bytes captured successfully |
 | `decoded` | canonical CBOR decoded into envelope structure |
 | `schema_valid` | required fields and shapes accepted |
-| `identity_bound` | persistent / instance identity resolved and registry-linked |
+| `identity_bound` | observed companion / boot-instance registry keys resolved and linked; not authentication |
 | `mirrored` | local mirror/operational view derived |
 | `federated` | representative/public projection updated |
 | `rejected` | pipeline stopped due to validation failure or conflict |

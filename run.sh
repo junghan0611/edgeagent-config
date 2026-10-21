@@ -88,6 +88,8 @@ cmd_targets() {
   echo "  RISC-V:            $RISCV_TARGETS"
   echo
   echo "Switch with: ./run.sh shell <target>   (or  IDF_TARGET=<target> nix develop)"
+  echo "The firmware shell ships Xtensa toolchains only. probe/inspect work for"
+  echo "every family; RISC-V builds need an explicit flake.nix extension first."
 }
 
 cmd_port() {
@@ -232,12 +234,12 @@ cmd_hello_edge() {
     exec python3 "$here/tools/host-master/master.py" "$@"
   fi
 
-  # Outside the nix devShell — bring cbor2 in just for this run.
-  # nix-shell -p (legacy) sets PYTHONPATH for python3Packages.* automatically;
-  # `nix shell` (flake) does not. We use the legacy form on purpose here.
-  echo "cbor2 not on PYTHONPATH; pulling python3Packages.cbor2 via nix-shell ..."
-  exec nix-shell -p python3 python3Packages.cbor2 \
-    --run "python3 '$here/tools/host-master/master.py' $*"
+  # Outside the nix devShell — use the toolchain-free host shell so cbor2
+  # comes from this repo's flake.lock, not the user's nixpkgs channel.
+  # `nix develop` runs the python setup hook, so PYTHONPATH is set.
+  echo "cbor2 not on PYTHONPATH; entering the host shell (.#host) ..."
+  exec nix develop "$here#host" --command \
+    python3 "$here/tools/host-master/master.py" "$@"
 }
 
 cmd_help() {

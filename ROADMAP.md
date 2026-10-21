@@ -21,7 +21,9 @@ inner family, middle handshake, outer citizenship. README is the canonical
 source for that model; this file maps phases onto it.
 
 An edge node joins the inner circle through its card, not through shared
-storage.
+storage. This describes self-description and indexing, not authenticated
+admission or permission; the trust boundary is summarized in
+[README — The three -config siblings](README.md#the-three--config-siblings).
 
 ## Direction log
 

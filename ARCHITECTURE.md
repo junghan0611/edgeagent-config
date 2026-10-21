@@ -203,6 +203,13 @@ crossed:
 The full measurement-vs-assertion rule is
 [AGENTS.md §5](AGENTS.md#5-source-of-truth-measure-first-ask-second).
 
+Authentication is a separate boundary: NodeCard is self-description,
+registry identity is observed companion/boot indexing, and neither proves
+an authenticated principal or permission. The three sibling responsibilities
+and unresolved role/trust decisions are summarized in
+[README — The three -config siblings](README.md#the-three--config-siblings).
+No role-grant schema or security protocol is selected here.
+
 ## 8. The conveyor that builds the card
 
 Tying §4, §5, §7 together: the card is one of the views the
