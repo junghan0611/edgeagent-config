@@ -87,6 +87,23 @@ exist. Linkless documents go stale and become deprecated. `NEXT.md` is
 allowed because it is linked here and intentionally volatile; update or
 prune it at the end of each repo session.
 
+### Steward document — 담당자 문서
+
+The existing public botlog steward for this repository is Denote
+`20260222T083800`, titled **§edgeagent-config: #담당자 엣지 에이전트 —
+ESP32 M5Stack 몸과 A2A 카드 생태계**:
+<https://notes.junghanacs.com/botlog/20260222T083800>.
+Locate its current Org path with `denotecli read 20260222T083800`; filenames
+may change, but the identifier remains the anchor.
+
+When GLG says “담당자 문서 업데이트”, append a dated heading to **this
+existing note**, using the `botlog` and `emacs` skills, and add the required
+history entry. Do not create another steward or a per-session replacement.
+Keep durable steward judgments, scope and current posture here; keep the
+next concrete action in repo `NEXT.md`. Older note content is historical
+context, not authority over current repository contracts. This is a public
+note: never include internal project details or secrets.
+
 ### Planning discipline — ROADMAP vs NEXT
 
 - `ROADMAP.md` is the project memory of direction. It is a living roadmap,
