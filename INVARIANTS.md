@@ -123,8 +123,9 @@ Invariant:
 
 ## 6. A2A is a first-class edge interface
 
-An edge node is expected to communicate with other agents. A2A messages must be
-modeled as explicit events and outputs.
+Where a node speaks to peers, A2A messages must be modeled as explicit
+events and outputs. The same boundary applies to requests from a helper,
+regardless of which node owns the network connection.
 
 Forbidden:
 
@@ -144,6 +145,11 @@ transition -> Output.apply_actuator_command
 Invariant:
 
 > Peer communication is part of the state machine, not an exception to it.
+
+The state owner decides what to accept. Delivery is not acceptance;
+acceptance is not completion; a result is not a fresh state observation.
+Unknown results stay unknown. A discovery or resynchronization operation
+must not implicitly replay an unresolved effect request.
 
 ## 7. Flexible software requires explicit contracts
 
@@ -186,8 +192,9 @@ Invariant:
 
 ## 9. Self-description is a contract
 
-A node must speak itself accurately through a card. If the card lies, every
-peer relying on it is now wrong, and the family loses trust silently.
+If a node publishes a card, it must speak for itself accurately. If the card
+lies, every peer relying on it is wrong. This does not require the local
+transition or the host replay to publish a card.
 
 The card is built by the core, not by the boundary. Board init injects a
 static profile (boot-stable: compile-time constants plus values read once

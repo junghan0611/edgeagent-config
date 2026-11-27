@@ -5,11 +5,12 @@ A host-side toy that proves "엣지가 살아난다" without any ESP board.
 ## Why this exists
 
 `fake_edge.py` is the **seat the future Zig core will occupy**. It runs
-the same six-stage conveyor described in
-[ARCHITECTURE.md §4](../../ARCHITECTURE.md), answers the same four
-envelope kinds defined in [spec/ENVELOPE.md §3](../../spec/ENVELOPE.md),
-and emits the same `NodeCard` shape from
-[spec/PROFILE.md](../../spec/PROFILE.md).
+a synchronous subset of the conveyor described in
+[ARCHITECTURE.md §4](../../ARCHITECTURE.md): it reads a frame, transitions,
+and dispatches replies. It uses the envelope kinds in
+[spec/ENVELOPE.md §3](../../spec/ENVELOPE.md) and the `NodeCard` shape from
+[spec/PROFILE.md](../../spec/PROFILE.md). It is a smoke test, not the
+virtual-clock replay planned for the common core.
 
 `master.py` is the **host-side agent (you, or Claude)** that throws
 envelopes at the edge and prints what comes back. It does not need to
@@ -24,8 +25,7 @@ The wire stays the same.
 - `envelope.py` — CBOR encode/decode for the 4 envelope kinds.
 - `fake_edge.py` — a host-only edge that:
   - boots once, fills a `StaticProfile` (chip family, MAC, inventories),
-  - runs a 100 ms self-inspect loop,
-  - reads CBOR envelopes from stdin,
+  - blocks on stdin frames; no periodic tick or timed transitions,
   - answers `who_are_you`, `what_can_you_do`, `read_health`, `do_x=ping`,
   - writes CBOR envelopes to stdout.
 - `master.py` — spawns `fake_edge.py` as a subprocess and walks the

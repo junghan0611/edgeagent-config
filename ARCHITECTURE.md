@@ -1,8 +1,9 @@
 # Architecture — Edge Agent
 
-This document is the one-page synthesis of every architectural
-decision currently locked in this repository. The other documents go
-into specifics; this one shows the whole shape at once.
+This document describes a common edge firmware frame: a Zig-oriented
+state machine with platform-independent contracts and product-owned
+composition. ESP32 / M5Stack is the measured bench, not the scope of
+the core. This is a design, not a deployed runtime.
 
 > If you are reading this for the first time, read this page first,
 > then [AGENTS.md](AGENTS.md) for the agent-facing rules and
@@ -50,14 +51,47 @@ This is the same posture the internal production Zig reference (see
 production today. The 자판기 framing is the input-side mirror of the
 "프린터 비유" used there: same coin → same can.
 
-## 3. The 4-layer model
+### Roles are composed outside the common transition
+
+The product assembly point selects functions, binds their capability
+contracts, and defines which requests may cross each boundary. Each
+node owns its state in one loop. A helper can send a request and keep
+its own record of the result; it cannot update a controller's state or
+acquire its authority. A role label may describe the assembly, but the
+common transition does not branch on board or role names.
+
+For example, a local controller can work without direct server-network
+access. A helper can run on an MCU or a Linux-class system and relay
+requests without taking ownership of local control.
+This is equivalence of responsibility, not of runtime, HAL, control
+period, or deployment policy. Product capabilities, policies, bindings,
+and hardware/safety evidence remain outside the public core.
+
+### Requests, results, and observations
+
+Discovery answers what is known to be available; the owner decides
+whether to accept the actual request. Delivery, acceptance, completion,
+and a fresh state observation are distinct. Preserve whether a report
+comes from one's own action, another node's report, or independent
+observation. No evidence means unknown, not success or failure.
+
+Results are queryable from the owner; a completion notification is
+optional. The common core does not automatically replay unresolved
+requests after restart or disconnect. Query first, and consider an
+explicit re-execution only when non-execution and idempotence are both
+established. Correlation must not confuse old and
+new requests across restart. It is not evidence of exactly-once physical
+execution. Waiting or querying cannot stall independent work. This
+contract chooses no persistence, queue, scheduler, or wire format.
+
+## 3. The layer model
 
 ```text
 Layer 4. Transport (replaceable)
    ESP-NOW · MQTT · BLE · CoAP — carrier only.
 
 Layer 3. A2A Contract (pure)
-   NodeCard, Capability query, Event, Output ack — canonical envelope.
+   Optional peer-facing projection: NodeCard, query, event, ack.
 
 Layer 2. State Machine Core (Zig, hardware-agnostic)
    transition(state, event, now_ms) -> (next_state, actions[])
@@ -69,16 +103,15 @@ Layer 1. Board Init / HAL Boundary (per-board)
    Callbacks emit events. Outputs drive pins.
 
 Layer 0. Hardware
-   ESP32-WROOM, ESP32-CAM, ESP32-S3 audio board, ESP32-PICO-D4 /
-   M5Stack-labeled paths, future M5Stack and ESP-family boards.
-   Per-board cards: see BOARDS.md.
+   ESP32 / M5Stack bench today; other targets or a host are separate bindings.
+   Bench observations: see BOARDS.md.
 ```
 
 Hard rules at this layering:
 
 - The core does not know which board it runs on.
-- A new board adds a new Layer 1 plus a new `StaticProfile`. The core
-  never changes.
+- A new target supplies bindings and, where it publishes a card, a
+  `StaticProfile`. Adding a target must not fork the common core.
 - Callbacks at Layer 1 emit events; they never mutate state directly.
 - Outputs from Layer 2 drive Layer 1; Layer 1 reports outcomes as
   new events.
@@ -124,7 +157,8 @@ Notes on each stage:
 
 ## 5. Card-first principle
 
-Every node speaks itself through a card. The card has three parts:
+Where a node publishes a peer-facing card, it has three parts. A card
+is not a prerequisite for the local core or its host replay:
 
 ```
 NodeCard = StaticProfile        (boot-stable: compile-time + values

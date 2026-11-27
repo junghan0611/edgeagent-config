@@ -2,13 +2,16 @@
 
 **"I am the Edge."**
 
-This repository is a roadmap-first, documentation-first research shell for
-Zig-oriented small edge agents. Do not add code, build systems, directories,
-or abstractions until a human explicitly asks for them.
+This repository is the documentation-first home for a public, Zig-oriented
+common edge firmware core. Roles come from composed functions and capabilities,
+not platform names. ESP32 / M5Stack is the bench, not the design boundary.
+Do not add code, build systems, directories, or abstractions until a human
+explicitly asks for them.
 
-The current job is to preserve hard-won design invariants before firmware
-exists, and to keep the roadmap / multi-board / card-first architecture aligned
-before any single board's quirks contaminate the design.
+Keep the common contract and synthetic verification usable without private
+product code, policies, target configurations, or customer and safety data.
+Product teams own those materials and may return a synthetic reproducer of
+a common defect, not the source material.
 
 ## 1. Project phase: research shell
 
@@ -21,7 +24,8 @@ Allowed work:
 - improve this `AGENTS.md`
 - improve `INVARIANTS.md`
 - improve `ROADMAP.md`
-- maintain `flake.nix` as a multi-board ESP32 family bring-up shell
+- maintain `flake.nix` as an ESP32 bench bring-up shell; broader architecture
+  does not expand its toolchain or verified targets
 - maintain `tools/host-master/` (Phase 4.5 host-side toy — Python
   fake-edge + master that exercises the canonical envelope without
   any board)
@@ -65,6 +69,7 @@ or agent) should walk it:
   axes + verification status
 - [ROADMAP.md](ROADMAP.md) — living roadmap: phase plan plus dated
   direction decisions as they accumulate
+- [CHANGELOG.md](CHANGELOG.md) — released snapshots and closed checkpoints
 - [NEXT.md](NEXT.md) — current next-step queue only; keep it actionable,
   and move durable decisions back into ROADMAP.md or the documents above
 - [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from
@@ -244,7 +249,7 @@ Layer 4. Transport (replaceable)
    ESP-NOW · MQTT · BLE · CoAP — carrier only.
 
 Layer 3. A2A Contract (pure)
-   NodeCard, Capability query, Event, Output ack — canonical envelope.
+   Optional peer-facing projection: NodeCard, Capability query, Event, ack.
 
 Layer 2. State Machine Core (Zig, hardware-agnostic)
    transition(state, event, now_ms) -> (next_state, actions[])
@@ -271,8 +276,9 @@ Layer 0. Hardware
 Rules:
 
 - The core does not know which board it runs on.
-- A new board adds a new Layer 1 plus a new static profile. The core never
-  changes.
+- A new target adds its bindings and, if needed, a static card profile.
+  A target does not fork the common core. Product composition and authority
+  belong at the assembly boundary, not behind role or platform branches.
 - Callbacks at Layer 1 emit events; they never mutate state directly.
 - Outputs from Layer 2 drive Layer 1; Layer 1 reports outcomes as new
   events.
@@ -283,7 +289,8 @@ Rules:
 
 ## 4. Card-first principle
 
-Every node speaks itself through a NodeCard:
+A node that publishes a peer-facing NodeCard describes itself as follows.
+The common state machine and first host replay do not require a card:
 
 ```text
 NodeCard = StaticProfile        (boot-stable: compile-time constants plus
@@ -352,8 +359,9 @@ Rules:
 
 ## 6. Multi-board posture
 
-This repository targets a board *family*, not a single device. Three
-boards have full Phase 0 verification (ESP32-WROOM, ESP32-CAM, an
+The common frame spans target classes in design; verified bring-up remains
+an ESP32-family bench, not proof of other platforms. Three boards have full
+Phase 0 verification (ESP32-WROOM, ESP32-CAM, an
 ESP32-S3 audio board), and one ESP32-PICO-D4 has chip-side verification
 through an M5Stack-labeled USB-UART path. The basecamp is shaped to
 accept the rest of the ESP / M5Stack line through a single axis.

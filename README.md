@@ -2,279 +2,61 @@
 
 > I am the Edge.
 
-`edgeagent-config` is a public research shell for small A2A-capable edge
-agents. It is intentionally roadmap-first and documentation-first: no firmware
-template, no build system, no runtime scaffold yet. The first artifact is the
-set of invariants future Zig edge nodes must not violate, and the architectural
-shape that lets one core run unchanged on different boards.
+A public, Zig-oriented project for a **common edge firmware core**. The goal is a small state machine whose roles come from the capabilities and functions composed around it, not from the name of its board. ESP32 / M5Stack is the first bench, not the limit of the design.
 
-## Why this exists
+**Today:** architecture and protocol drafts, an ESP32 bring-up shell, and a host-only Python/CBOR smoke test. There is no Zig core, cross-platform runtime, or deployable firmware in this repository yet.
 
-`homeagent-config` is for Raspberry Pi 5 class home agents: Go, Node.js,
-Linux, services, and orchestration. That is the Hub.
+## One core, different roles
 
-`edgeagent-config` is the other side:
+Each node owns its local state. A pure transition takes `(state, event, now)` and returns the next state and action requests. The surrounding I/O executes requests and reports what happened. Clocks, drivers, links, and platform names stay outside the common transition. The product's assembly point binds the functions to capabilities and decides which requests may flow between them.
 
-- small Linux boards
-- ESP32-class or MCU-adjacent devices
-- sensors and actuators attached to a body or a room
-- Zig-oriented firmware and low-level agents
-- nodes that speak to other agents by default
+A local controller and a network helper illustrate the split:
 
-The scenario shift is:
+- **Controller:** owns local control and decides what to accept or reject. In this composition it is not directly connected to the network; the helper is the server-facing node.
+- **Helper:** can ask what is available now, relay requests, and report confirmed results to a server. A helper can run on an MCU or a Linux-class host without sharing a runtime or HAL with the controller.
 
-```text
-I am the Hub.  ->  I am the Edge.
-```
+What a node advertises is not permission to use it. What was open during discovery may be closed by the time a request reaches the owner. Delivery, acceptance, completion, and a fresh state observation are distinct facts, each with its source. Querying the owner for a result is the baseline; completion notifications are optional. After restart or disconnection, query before drawing a conclusion, leave unconfirmed results unknown, and do not automatically replay pending requests. Waiting for a result must not block unrelated work.
 
-A hub coordinates the home. An edge node is closer to the world. It may have
-two sensors attached to its body. It observes, keeps state, and talks to
-peers. Practically, the first product family to bench is M5Stack: cheap,
-stackable ESP32 bodies with Grove/HY2.0 expansion, good enough to compose a
-small family of edge senses and expressions.
+**Public here:** the common state-machine contract, synthetic examples, and offline verification. **Product-owned:** custom capability specifications and policies, target bindings, deployment and recovery decisions, and hardware/safety evidence. The public core and its tests must stand without product code, customer material, or private fixtures.
+
+## What we verify first
+
+The next design checkpoint is a deterministic host replay with a supplied monotonic clock and synthetic capabilities: correlate crossed responses, distinguish a deadline from a late response, and exercise a controller/helper pair across disconnection and restart. A replay verifies the given event order and state/action trace, not real-time behavior, physical outcomes, or safety. It does not require a card, transport, or shared scheduler.
+
+The existing `./run.sh hello-edge` is a separate smoke test: a host master exchanges CBOR envelopes with a Python fake edge on stdin/stdout. It is not that replay harness. See [ROADMAP.md](ROADMAP.md) for scope and [NEXT.md](NEXT.md) for the next step.
 
 ## The three -config siblings
 
-The shared direction is a small authenticated connection structure, not
-an AI product stack or a full IoT cloud. Personal work here is non-Tuya.
-
 | Repository | Intended responsibility |
 | --- | --- |
-| [coreagent-config](https://github.com/junghan0611/coreagent-config) | Server-side authentication, registration, ownership, authorization, connection lifecycle and revocation; reproducible server packaging |
-| [homeagent-config](https://github.com/junghan0611/homeagent-config) | Hub/vendor base, radio and protocol services, and packaging the connection client across boot, provisioning, updates and recovery; current focus is SMHUB Nano |
-| **edgeagent-config** | Small-node hardware-independent state machine, board capabilities, NodeCard self-description and canonical message contracts |
+| [coreagent-config](https://github.com/junghan0611/coreagent-config) | Server-side identity, authorization, registration, connection lifecycle, and revocation |
+| [homeagent-config](https://github.com/junghan0611/homeagent-config) | Hub/vendor base, radio and protocol services, and connection client packaging |
+| **edgeagent-config** | Common edge state machine, capability composition, host verification, and optional peer-facing projections |
 
-These are responsibility boundaries, not implemented connection features.
-A NodeCard describes capabilities; it is not authentication evidence or a
-role/permission grant. An authenticated Hub does not prove the independent
-identity of downstream Edges. Binding observed node identifiers to an
-authenticated principal must be explicit.
-
-GLG's direction (2026-10-21) is simple: after authentication, a device
-receives a defined role through a card and performs it in its state-machine
-loop. That role-assignment contract is not yet specified; it is not the
-existing NodeCard or its boot-stable `firmware_role` field. AI functions
-are optional capabilities, not prerequisites for participation.
-
-Direct Edge-to-server versus Hub-mediated connectivity, credential issuance,
-claim/transfer/release authority, local admission and offline policy remain
-open. No transport, broker or certificate tooling is selected by this
-alignment. The siblings' proposed host fake-Hub authentication/revocation
-check covers Hub-to-server connectivity only, not downstream Edge trust;
-it has not been run here.
+These are responsibility boundaries, not implemented connectivity. A NodeCard describes a node; it does not authenticate it or grant permissions. An authenticated Hub does not prove the independent identity of downstream Edges. Binding a reported identity to an authenticated principal must be explicit. A future authenticated role grant is separate from both the local composition of functions and the descriptive `firmware_role` field. Credential issuance, principal binding, local admission, and revocation remain open.
 
 ## Position in the agent ecology
 
-This repository is the MCU-side realization of a longer family conversation
-about how agents *meet* each other. That conversation lives here:
+This work grew out of a broader conversation about [how agents meet](https://notes.junghanacs.com/botlog/20260311T134429): inner family (existing relationships), middle handshake (introductions across families), and outer citizenship (platform-independent identity, a longer-term direction). Cards can make nodes describable within the family; they do not admit nodes or grant authority. An edge agent can observe, keep state, or speak to peers without running an AI model or exposing its local control loop to the network.
 
-- Public note: <https://notes.junghanacs.com/botlog/20260311T134429>
-- Subject: existence-to-existence connection grammar — ACP, A2A, ANP, and the
-  bothim ecosystem.
+## ESP32 bring-up bench
 
-That note frames three concentric circles. The defining axis is *relation*,
-not medium:
-
-1. **Inner circle (family)** — agents that already share an identity and a
-   memory of work. No formal handshake; the relation precedes the protocol.
-   The medium can vary — a shared filesystem, a shared calendar, or a stream
-   of broadcast cards.
-2. **Middle circle (handshake)** — agents meeting other people's agents
-   through AgentCard-style introductions (A2A).
-3. **Outer circle (citizenship)** — agents proving identity without belonging
-   to any platform (ANP / W3C DID). Distant future.
-
-`homeagent-config` lives in the inner circle through a rich medium: shared
-files, shared calendar, REST/SSE wiring. `edgeagent-config` lives in the
-inner circle through a thinner medium: it cannot read or write the family's
-filesystem, so it joins by broadcasting a small card that describes itself.
-The membership is the same; only the carrier differs. Here, joining through
-a card means becoming describable and indexable; admission and permissions
-still require an explicit authenticated binding.
-
-A small node is still an agent. A small card is still a card.
-
-## Design stance: the 4-layer model
-
-```text
-Layer 4. Transport (replaceable)
-   ESP-NOW · MQTT · BLE · CoAP — carries envelopes, knows nothing of cards.
-
-Layer 3. A2A Contract (pure)
-   "who are you?"     -> NodeCard
-   "what can you do?" -> Capability list
-   "do(X)"            -> Event injected into the core
-
-Layer 2. State Machine Core (Zig, hardware-agnostic)
-   transition(state, event) -> next state, [output]
-   No allocator beyond fixed-size buffers.
-   Time values carry their axis in the type name.
-   The core BUILDS the card. Boards inject only a static profile.
-
-Layer 1. Board Init / HAL Boundary (per-board)
-   Boot, clocks, GPIO map, peripheral init.
-   Callbacks emit events. Outputs drive pins.
-
-Layer 0. Hardware
-   ESP32-WROOM, ESP32-CAM, ESP32-S3 audio, ESP32-PICO-D4,
-   M5Stack bodies, future ESP-family MCUs.
-```
-
-The architecture itself is the manifesto:
-
-- The core does not know which board it runs on.
-- A new board adds a new Layer 1 and a new static profile. The core never
-  changes.
-- Transport is replaceable. The contract is not.
-
-## Design notes
-
-- [ARCHITECTURE.md](ARCHITECTURE.md) — one-page synthesis (**start here**)
-- [AGENTS.md](AGENTS.md) — agent-facing rules and project phase
-- [INVARIANTS.md](INVARIANTS.md) — hard rules: time, state, transport, card
-- [BOARDS.md](BOARDS.md) — bench-observed board inventory, capability axes,
-  and verification status
-- [ROADMAP.md](ROADMAP.md) — living roadmap: phase plan plus dated
-  direction decisions as they accumulate
-- [NEXT.md](NEXT.md) — current next-step queue only; durable decisions move
-  into ROADMAP.md or the design documents above
-- [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — patterns read from external
-  references (no code is imported)
-- `spec/` — protocol and schema contracts:
-  - [PROFILE.md](spec/PROFILE.md) — NodeCard field contract
-  - [ENVELOPE.md](spec/ENVELOPE.md) — canonical A2A envelope and encoding
-  - [REGISTRY.md](spec/REGISTRY.md) — companion identity and boot-instance indexing
-  - [INGEST.md](spec/INGEST.md) — receive, validate, bind, and project edge envelopes
-
-## NodeCard, in one paragraph
-
-Every node speaks itself through a card. The card has three parts. The
-**StaticProfile** is *boot-stable*: some fields are compile-time constants
-(board family, firmware id), others are read once during board init from
-hardware identity registers (MAC from eFuse, chip revision, flash size,
-PSRAM size). It does not change for the lifetime of one boot cycle. The
-**RuntimeCapability** reflects what the node can actually do *right now* —
-current mode, peripherals powered, GPIOs owned, capabilities advertised —
-and changes whenever mode changes. **Health** carries a typed monotonic
-uptime, a boot epoch (so peers can tell one boot cycle from another), free
-internal RAM and free PSRAM as separate fields, last error, and time since
-the last A2A peer contact. The core composes the card. Boards never
-serialize themselves directly to a transport.
-
-## Supported boards
-
-Bench-observed hardware lives in [BOARDS.md](BOARDS.md) — one card per
-board, with chip facts, host path, wired capabilities, and current
-verification status. The basecamp currently covers ESP32-WROOM (devkit),
-ESP32-CAM (AI Thinker), an ESP32-S3 audio board, and an ESP32-PICO-D4
-observed through an M5Stack-labeled USB-UART path (chip-side only until
-model + firmware bring-up are confirmed).
-
-The same `nix develop` shell serves every bench-observed board. The chip is
-selected by `IDF_TARGET`; the host port is derived from it (see the
-shell hook in `flake.nix` and the host-side `./run.sh`). Differences
-belong below the shell, in Layer 1 (board init) and Layer 0 (hardware)
-— never in the shell, the core, or the envelope.
-
-## Bring-up shell
-
-The first executable artifact is a development shell, not firmware
-code. It provides ESP-IDF, an Xtensa-capable Zig toolchain, `esptool`,
-and serial monitor tools. The host-side entry point `./run.sh` exposes
-the same family-aware view from outside the shell.
-
-The firmware shell ships Xtensa toolchains only (`esp32`, `esp32s2`,
-`esp32s3`), because every bench board is Xtensa. A RISC-V board needs
-an explicit `flake.nix` extension before it can build. It keeps the
-nixpkgs that `nixpkgs-esp-dev` locks upstream (nixos-25.11); it is not
-aligned to the system's 26.05.
-
-A second, toolchain-free shell (`nix develop .#host`) carries `esptool`,
-serial tools, and the Phase 4.5 host-master toy on the same nixpkgs
-revision as `nixos-config` at the 2026-10-21 alignment checkpoint;
-future lock updates are independent. `./run.sh hello-edge` falls back to
-this shell when the current Python lacks `cbor2`.
-
-For host-only work, select `nix develop .#host` explicitly. Plain
-`nix develop` and `./run.sh shell` still select the firmware shell and
-can fetch the older nixpkgs source, ESP-IDF sources, and toolchains.
-Keep `.envrc` disabled when these downloads are not intended.
+[BOARDS.md](BOARDS.md) records the measured boards and limits of each observation. ESP32-WROOM, ESP32-CAM, and an ESP32-S3 audio board reached Phase 0 using external samples. The ESP32-PICO-D4 via an M5Stack-labeled USB-UART path is chip-identified only.
 
 ```bash
-# Host-side (no nix shell needed)
-./run.sh boards          # bench-observed board lineup + status
-./run.sh targets         # supported chip families
-./run.sh probe esp32s3   # chip + flash + MAC of a connected board
-./run.sh inspect esp32s3 # probe + USB descriptor + eFuse + boot capture
-./run.sh hello-edge      # Phase 4.5 — host master ↔ host fake edge, no board
-
-# Enter the dev shell, family-aware
-./run.sh shell esp32s3   # equivalent to: IDF_TARGET=esp32s3 nix develop
-
-# Inside the dev shell:
-edge-chip       # esptool.py chip_id   (uses $IDF_TARGET, $ESPPORT)
-edge-flash-id   # esptool.py flash_id
-edge-mac        # esptool.py read_mac
-edge-target     # idf.py set-target $IDF_TARGET
-edge-build      # idf.py build
-edge-run        # idf.py flash + monitor
-
-# IDF_TARGET defaults to "esp32"; ESPPORT is derived from it
-# (native USB-JTAG targets get /dev/ttyACM0, UART-bridged get /dev/ttyUSB0).
-# Both can be overridden by exporting them.
+./run.sh boards          # measured board lineup and verification status
+./run.sh targets         # ESP-IDF target families and shell limits
+./run.sh hello-edge      # host-only Python / CBOR smoke; no board
+nix develop .#host       # small host shell, no ESP-IDF toolchain
+./run.sh shell esp32s3   # ESP32 bench shell; may fetch ESP-IDF and toolchains
 ```
 
-If the chosen serial port is not writable, add the user to `dialout`
-or temporarily:
+Plain `nix develop` selects the ESP32 bench shell. It currently provides Xtensa targets (`esp32`, `esp32s2`, `esp32s3`) and is not a claim of support for other MCU families or Linux firmware deployment. Use `./run.sh probe <target>` or `./run.sh inspect <target>` only with an intended connected board; follow [BOARDS.md](BOARDS.md) and the sample procedure in [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md). Keep `.envrc` disabled when automatic shell entry is not wanted.
 
-```bash
-sudo chmod a+rw /dev/ttyACM0   # or /dev/ttyUSB0
-```
+## Read next
 
-### Boot mode notes per board family
-
-- **ESP32-WROOM (devkit)** — BOOT and EN buttons are on the board. `esptool`
-  resets and enters download mode through RTS/DTR automatically.
-- **ESP32-CAM (AI Thinker)** — the camera module itself has no BOOT button.
-  The ESP32-CAM-MB baseboard provides reset and a usable IO0 path. If the MB
-  cannot enter download mode, jumper IO0 to GND, press reset, then run
-  `esptool`.
-
-## Template stance
-
-External reference repositories exist to be read, not to define the
-shape of this repository. The principal open-source reference for the
-ESP-IDF + Zig toolchain is
-[`kassane/zig-esp-idf-sample`](https://github.com/kassane/zig-esp-idf-sample),
-kept locally at `~/repos/3rd/esp32/zig-esp-idf-sample`; that is also
-where Phase 0 firmware (target switch, build, flash, monitor) actually
-runs today (procedure recorded in
-[NOTES-EXTERNAL.md](NOTES-EXTERNAL.md)).
-
-The canonical list — local paths, upstream URLs, and the "read-only,
-no wholesale import" rule — lives in
-[AGENTS.md § 1.1 External reference repos](AGENTS.md#11-external-reference-repos).
-Patterns learned from reading external code are captured in
-[NOTES-EXTERNAL.md](NOTES-EXTERNAL.md); code does not flow into this
-repository. When firmware work begins here, copy only the smallest
-build-system glue needed.
-
-## Non-goals for now
-
-- No `src/` tree yet
-- No `build.zig` yet
-- No premature hardware abstraction layer
-- No fake sample app just to look complete
-- No firmware dependency choices before the architecture has a reason
-- No A2A transport implementation before the card and core are testable on
-  the host
-
-## First principles
-
-1. Time is not a scalar.
-2. State is owned by the node state machine.
-3. I/O is an edge of the system, not the center.
-4. A small node is still an agent.
-5. Self-description is a contract: a node speaks itself through its card.
-6. Transport is replaceable. The contract is not.
-7. Flexibility comes from explicit contracts, not from implicit behavior.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — common core, composition, boundaries, and projections
+- [INVARIANTS.md](INVARIANTS.md) — state ownership, typed time, and interface rules
+- [ROADMAP.md](ROADMAP.md) · [NEXT.md](NEXT.md) · [CHANGELOG.md](CHANGELOG.md) — direction, next step, and releases
+- [AGENTS.md](AGENTS.md) · [NOTES-EXTERNAL.md](NOTES-EXTERNAL.md) — contribution gates and read-only references
+- [PROFILE](spec/PROFILE.md) · [ENVELOPE](spec/ENVELOPE.md) · [REGISTRY](spec/REGISTRY.md) · [INGEST](spec/INGEST.md) — existing peer-facing contracts; not a prerequisite for core replay

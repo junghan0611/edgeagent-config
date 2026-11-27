@@ -20,12 +20,40 @@ The phases below map to the concentric-circle ecology defined in
 inner family, middle handshake, outer citizenship. README is the canonical
 source for that model; this file maps phases onto it.
 
-An edge node joins the inner circle through its card, not through shared
-storage. This describes self-description and indexing, not authenticated
-admission or permission; the trust boundary is summarized in
+A peer-facing edge can describe itself through a card rather than shared
+storage. This is self-description and indexing, not authenticated admission
+or permission; the trust boundary is summarized in
 [README — The three -config siblings](README.md#the-three--config-siblings).
 
 ## Direction log
+
+### 2026-11-27 — Widen the family: a common edge firmware frame
+
+- **Scope widens from an ESP-only concept to a common frame.** Declared by
+  GLG on 2026-11-27: until now this repository was a concept; a concrete
+  downstream need now exists, so the common frame is extended to serve it.
+  The family is no longer bounded by one chip vendor.
+- **ESP32 / M5Stack stays the bench line.** The 2026-05-29 entry below still
+  describes how boards are measured and admitted. Widening the frame does not
+  retire the bench; it adds seats the same core must be able to occupy.
+- **Roles are composed, not hardcoded.** A local controller and a network
+  helper exercise different responsibilities under the same contracts.
+  MCU and Linux-class helpers need not share a runtime or HAL.
+- **Public core, product-owned policy.** This repository owns the common
+  contracts and synthetic, offline verification. Product-specific capability
+  specifications, policy, target configuration, and hardware or safety
+  evidence stay with the product. No product code or customer material
+  enters this repository.
+- **Results are queried, not assumed.** GLG's 2026-11-27 decision: query
+  the owner by default; completion notifications are optional. After restart
+  or disconnect, query instead of automatically replaying pending work.
+  Report only confirmed results; unknown stays unknown. Waiting must not
+  block independent work. See [ARCHITECTURE.md](ARCHITECTURE.md).
+- **Not decided by this entry:** opening Phase 2 code, any wire or spec
+  change, NodeCard status of a non-ESP node, toolchain coverage beyond the
+  current bring-up shell. Each still needs its own explicit decision.
+- Earlier phase entries retain the original ESP bench plan. They are not
+  prerequisites for the common host replay or a claim of wider target support.
 
 ### 2026-05-29 — M5Stack-first edge bench
 
@@ -117,7 +145,28 @@ Done when:
 
 ## Phase 2 — Minimal host-testable core
 
-Goal: create the smallest Edge Agent core without ESP-IDF dependency.
+Goal: create the smallest Edge Agent core that can be verified on the host
+without an SDK, board, private fixture, or live link.
+
+First design checkpoint, before implementation: write the synthetic traces
+as event inputs and expected state/action outputs. Use explicit monotonic
+receive times and an explicit order for ties; do not prescribe which order
+is valid for every product.
+
+1. Two capabilities return results in reverse order. Each result closes only
+   its own request; dispatch does not count as completion.
+2. A deadline is reached, followed by a late result. The late result is
+   observable but does not close the request twice or prove physical stop.
+3. A controller and helper retain separate state. Discovery may become stale
+   before admission. On lost notification, query for the result; after restart
+   or link loss, do not automatically replay unconfirmed work or confuse an
+   old response with a new request. State resync does not itself request an
+   effect, and an independent event still progresses while waiting.
+
+These cases prove the specified transition trace, not target timing,
+concurrency, physical outcomes, or safety. NodeCard, transport, persistence,
+and a shared scheduler are not prerequisites. The later card and time-adapter
+checks below remain separate proof surfaces.
 
 Candidate files, only after explicit approval:
 
@@ -246,9 +295,9 @@ exercised before firmware is real.
 Allowed sources:
 
 - `tools/host-master/` — a host-side toy with two halves:
-  - `fake_edge.py`: the seat the future Zig core will occupy. Boots
-    once, fills a `StaticProfile`, runs a 100 ms self-inspect loop,
-    answers the 4 envelope kinds (`card`, `query`, `event`, `ack`).
+  - `fake_edge.py`: boots once, fills a `StaticProfile`, and handles
+    frames synchronously on stdin/stdout. It does not schedule a periodic
+    tick or produce timed transitions.
   - `master.py`: a CLI that throws envelopes at `fake_edge.py` and
     prints what comes back.
 - Canonical encoding remains CBOR (per `spec/ENVELOPE.md §2`); JSON
@@ -275,8 +324,9 @@ Done when:
 - A capability advertised in `capabilities_now` matches the
   `peripherals_active` story (no peripheral lying — invariant §10
   smoke test).
-- Round-trip CBOR encode → wire → decode matches byte-for-byte for
-  every envelope kind.
+- Separate outstanding check: verify byte-for-byte CBOR round trips for
+  every envelope kind. The current smoke checks message kinds and outcomes;
+  it does not establish that condition.
 
 ## Phase 5 — A2A transport 1: ESP-NOW broadcast
 
